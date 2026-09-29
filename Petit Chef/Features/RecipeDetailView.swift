@@ -6,6 +6,7 @@ struct RecipeDetailView: View {
     @Environment(CookingStore.self) private var cooking
     @Environment(RecipeLibrary.self) private var library
     @State private var confirmReplacement = false
+    @State private var exportShopping = false
     @State private var editIngredients = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @AppStorage("hapticsEnabled") private var hapticsEnabled = true
@@ -17,6 +18,13 @@ struct RecipeDetailView: View {
         ScrollView {
             VStack(spacing: 24) {
                 introduction
+                Button { exportShopping = true } label: {
+                    Label("Ajouter à une liste", systemImage: "checklist")
+                        .font(.subheadline.weight(.medium))
+                        .frame(maxWidth: .infinity, minHeight: 40)
+                }
+                .buttonStyle(.glass)
+                .accessibilityIdentifier("recipe.shopping")
                 ingredients
                 details
             }
@@ -39,6 +47,7 @@ struct RecipeDetailView: View {
             .padding(.bottom, 6)
             .frame(maxWidth: .infinity)
         }
+        .sheet(isPresented: $exportShopping) { RecipeShoppingSheet(recipe: adjusted) }
         .sheet(isPresented: $editIngredients) {
             IngredientEditor(draft: library.draft(for: recipe)) { draft in
                 library.save(draft, for: recipe.id)

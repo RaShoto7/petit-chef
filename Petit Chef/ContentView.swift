@@ -1,12 +1,28 @@
 import SwiftUI
 
 struct ContentView: View {
+    @State private var selectedTab = 0
+    @State private var shoppingPath: [UUID] = []
+    @Environment(ShoppingStore.self) private var shopping
     @State private var showCooking = false
     @State private var showSettings = false
     @Environment(CookingStore.self) private var cooking
 
     var body: some View {
-        HomeView(showCooking: $showCooking, openSettings: { showSettings = true })
+        TabView(selection: $selectedTab) {
+            Tab("Recettes", systemImage: "book.closed", value: 0) {
+                HomeView(showCooking: $showCooking, openSettings: { showSettings = true })
+            }
+            Tab("Listes", systemImage: "checklist", value: 1) {
+                ShoppingListsView(path: $shoppingPath) { selectedTab = 0 }
+            }
+        }
+            .onChange(of: shopping.requestedListID) { _, id in
+                guard let id else { return }
+                shoppingPath = [id]
+                selectedTab = 1
+                shopping.requestedListID = nil
+            }
             .sheet(isPresented: $showSettings) {
                 SettingsView()
                     .presentationDragIndicator(.visible)

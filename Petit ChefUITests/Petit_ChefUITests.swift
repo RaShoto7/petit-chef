@@ -5,13 +5,59 @@ final class Petit_ChefUITests: XCTestCase {
     override func setUpWithError() throws { continueAfterFailure = false }
 
     @MainActor
+    func testShoppingExportCheckAndRestore() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing", "-reset-cooking"]
+        app.launch()
+        app.tabBars.buttons["Listes"].tap()
+        XCTAssertTrue(app.staticTexts["Une recette. Et c’est listé."].waitForExistence(timeout: 5))
+        screenshot(app, "Shopping — Empty")
+        app.tabBars.buttons["Recettes"].tap()
+        app.buttons["home.recipe.burger-and-oven-fries"].tap()
+        app.buttons["recipe.servings.plus"].tap()
+        let export = app.buttons["recipe.shopping"]
+        for _ in 0..<5 where !export.isHittable { app.swipeUp() }
+        XCTAssertTrue(export.isHittable)
+        export.tap()
+        XCTAssertTrue(app.buttons["shopping.export.add"].waitForExistence(timeout: 5))
+        app.buttons["shopping.select.potatoes"].tap()
+        screenshot(app, "Shopping — Export")
+        app.buttons["shopping.export.add"].tap()
+        XCTAssertTrue(app.staticTexts["shopping.detail.title"].waitForExistence(timeout: 5))
+        screenshot(app, "Shopping — Detail")
+        let items = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "shopping.item.")).allElementsBoundByIndex.filter { $0.identifier != "shopping.item.add" }
+        XCTAssertFalse(items.contains { $0.label.contains("Pommes de terre") })
+        let first = try XCTUnwrap(items.first)
+        let identifier = first.identifier
+        first.tap()
+        for _ in 0..<5 where !app.buttons[identifier].isHittable { app.swipeUp() }
+        screenshot(app, "Shopping — Checklist")
+        XCTAssertEqual(app.buttons[identifier].value as? String, "Dans le panier")
+        app.terminate()
+        app.launchArguments = ["-ui-testing"]
+        app.launch()
+        app.tabBars.buttons["Listes"].tap()
+        let list = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "shopping.list.")).firstMatch
+        XCTAssertTrue(list.waitForExistence(timeout: 5))
+        screenshot(app, "Shopping — Lists")
+        list.tap()
+        let checked = app.buttons[identifier]
+        for _ in 0..<5 where !checked.isHittable { app.swipeUp() }
+        XCTAssertEqual(checked.value as? String, "Dans le panier")
+        checked.tap()
+        app.buttons["shopping.share"].tap()
+        XCTAssertTrue(app.otherElements["ActivityListView"].waitForExistence(timeout: 8))
+        screenshot(app, "Shopping — Share")
+    }
+
+    @MainActor
     func testCustomRecipeAndFlexibleCookingSurviveRelaunch() throws {
         let app = XCUIApplication()
         app.launchArguments = ["-ui-testing", "-reset-cooking"]
         app.launch()
         let recipe = app.buttons["home.recipe.burger-and-oven-fries"]
         XCTAssertTrue(recipe.waitForExistence(timeout: 8))
-        XCTAssertEqual(app.tabBars.count, 0)
+        XCTAssertEqual(app.tabBars.count, 1)
         XCTAssertEqual(app.staticTexts["home.title"].label, "mes recettes.")
         screenshot(app, "01 — Mes recettes")
         recipe.tap()

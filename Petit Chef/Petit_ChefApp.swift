@@ -5,6 +5,7 @@ struct Petit_ChefApp: App {
     @State private var cooking = Petit_ChefApp.makeCookingStore()
     @State private var account = AccountStore()
     @State private var library = RecipeLibrary(defaults: ProcessInfo.processInfo.arguments.contains("-ui-testing") ? UserDefaults(suiteName: "com.rafael.PetitChef.UITests")! : .standard)
+    @State private var shopping = ShoppingStore(defaults: ProcessInfo.processInfo.arguments.contains("-ui-testing") ? UserDefaults(suiteName: "com.rafael.PetitChef.UITests")! : .standard)
     @Environment(\.scenePhase) private var scenePhase
 
     private static func makeCookingStore() -> CookingStore {
@@ -31,6 +32,7 @@ struct Petit_ChefApp: App {
                 .environment(cooking)
                 .environment(account)
                 .environment(library)
+                .environment(shopping)
                 .preferredColorScheme(.light)
                 .tint(DesignSystem.Colors.ink)
                 .fontDesign(.rounded)
