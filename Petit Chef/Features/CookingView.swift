@@ -2,6 +2,7 @@ import SwiftUI
 import UIKit
 
 struct CookingView: View {
+    var onFinished: () -> Void
     @Environment(CookingStore.self) private var cooking
     @Environment(\.dismiss) private var dismiss
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -19,7 +20,7 @@ struct CookingView: View {
     private var steps: [RecipeStep] { cooking.recipe?.steps ?? [] }
     private var position: Int { min(index ?? cooking.currentIndex, max(0, steps.count - 1)) }
     private var step: RecipeStep? { steps.indices.contains(position) ? steps[position] : nil }
-    private var motion: Animation? { reduceMotion ? nil : .spring(response: 0.46, dampingFraction: 0.88) }
+    private var motion: Animation? { reduceMotion ? nil : .spring(response: 0.58, dampingFraction: 0.9) }
     private var started: Bool { step.map { cooking.engine?.session.startedStepIDs.contains($0.id) ?? false } ?? false }
     private var completed: Bool { step.map { cooking.engine?.session.completedStepIDs.contains($0.id) ?? false } ?? false }
     private var missing: [String] { step.flatMap { cooking.engine?.unmetDependencies(for: $0) } ?? [] }
@@ -27,23 +28,27 @@ struct CookingView: View {
     var body: some View {
         NavigationStack {
             Group {
-                if cooking.status == .completed { completion }
+                if cooking.status == .completed {
+                    completion.transition(reduceMotion ? .opacity : .opacity.combined(with: .scale(scale: 0.97)))
+                }
                 else if let step { guided(step) }
                 else { ContentUnavailableView("Aucune recette en cours", systemImage: "frying.pan") }
             }
-            .navigationTitle(cooking.recipe?.shortTitle ?? "Recette")
+            .navigationTitle(cooking.status == .completed ? "" : cooking.recipe?.shortTitle ?? "Recette")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button("Réduire", systemImage: "chevron.down") { dismiss() }
-                        .labelStyle(.iconOnly).accessibilityIdentifier("cooking.minimize")
-                }
-                ToolbarItem(placement: .topBarTrailing) {
-                    Menu {
-                        Button("Toutes les étapes", systemImage: "list.number") { showOverview = true }
-                        Button("Arrêter la recette", systemImage: "xmark.circle", role: .destructive) { confirmStop = true }
-                    } label: { Image(systemName: "ellipsis") }
-                    .accessibilityIdentifier("cooking.options")
+                if cooking.status != .completed {
+                    ToolbarItem(placement: .topBarLeading) {
+                        Button("Réduire", systemImage: "chevron.down") { dismiss() }
+                            .labelStyle(.iconOnly).accessibilityIdentifier("cooking.minimize")
+                    }
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Menu {
+                            Button("Toutes les étapes", systemImage: "list.number") { showOverview = true }
+                            Button("Arrêter la recette", systemImage: "xmark.circle", role: .destructive) { confirmStop = true }
+                        } label: { Image(systemName: "ellipsis") }
+                        .accessibilityIdentifier("cooking.options")
+                    }
                 }
             }
             .sheet(isPresented: $showOverview) { overview }
@@ -80,22 +85,16 @@ struct CookingView: View {
             ScrollView {
                 VStack(spacing: 20) {
                     Color.clear.frame(height: 1).id("top")
-                    HStack {
-                        Button { showOverview = true } label: {
-                            Text("Étape \(position + 1) sur \(steps.count)")
-                            Image(systemName: "chevron.down").font(.caption2)
-                        }
-                        .font(.subheadline).foregroundStyle(.secondary)
-                        .accessibilityIdentifier("cooking.overview")
-                        Spacer()
-                        if completed { Image(systemName: "checkmark.circle.fill").foregroundStyle(DesignSystem.Colors.accent) }
-                    }
+                    preparationScene(step)
+                        .frame(height: 290)
+                        .frame(maxWidth: .infinity)
+                        .accessibilityHidden(true)
                     ZStack {
                         instruction(step)
                             .id(step.id)
                             .transition(reduceMotion ? .opacity : .asymmetric(
-                                insertion: .offset(y: backwards ? -55 : 70).combined(with: .opacity),
-                                removal: .offset(y: backwards ? 55 : -70).combined(with: .opacity)))
+                                insertion: .modifier(active: StepArrival(offset: backwards ? -130 : 160, opacity: 0, scale: 0.97), identity: StepArrival()),
+                                removal: .modifier(active: StepArrival(offset: backwards ? 100 : -140, opacity: 0, scale: 0.98), identity: StepArrival())))
                     }
                     if !cooking.activeTimers.isEmpty { timers }
                     if let error = cooking.notificationError {
@@ -112,7 +111,11 @@ struct CookingView: View {
                 .frame(maxWidth: .infinity)
             }
             .scrollIndicators(.hidden)
-            .onChange(of: position) { _, _ in withAnimation(motion) { proxy.scrollTo("top", anchor: .top) } }
+            .onChange(of: position) { _, _ in
+                // A second scroll animation would fight the card transition.
+                var transaction = Transaction(); transaction.disablesAnimations = true
+                withTransaction(transaction) { proxy.scrollTo("top", anchor: .top) }
+            }
         }
         .safeAreaInset(edge: .bottom) { navigationControls }
     }
@@ -120,24 +123,37 @@ struct CookingView: View {
     private func instruction(_ step: RecipeStep) -> some View {
         ChefCard {
             VStack(alignment: .leading, spacing: 20) {
-                AnimatedCookingIllustration(stepID: step.id, recipeID: cooking.recipe?.id ?? "")
-                    .frame(height: 210).frame(maxWidth: .infinity)
                 Text(step.title)
-                    .font(.system(.title2, design: .rounded, weight: .semibold))
+                    .font(.system(.title, design: .serif, weight: .regular).italic())
+                    .fontDesign(.serif)
+                    .italic()
+                    .tracking(-0.6)
                     .accessibilityIdentifier("cooking.step.title")
                 Text(CookingText.formatted(step.instruction, unit: temperatureUnit))
                     .font(.body).lineSpacing(4)
                     .fixedSize(horizontal: false, vertical: true)
 
-            }.padding(22)
+            }.padding(24).frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
+    @ViewBuilder
+    private func preparationScene(_ step: RecipeStep) -> some View {
+        if cooking.recipe?.id == "tomato-mozzarella-toast" {
+            ToastPreparationView(stepID: step.id, isAnimated: !reduceMotion && scenePhase == .active)
+                .clipShape(.rect(cornerRadius: 32))
+        } else {
+            AnimatedCookingIllustration(stepID: step.id, recipeID: cooking.recipe?.id ?? "")
         }
     }
 
     private var navigationControls: some View {
         HStack(spacing: 16) {
-            ChefIconButton(symbol: "arrow.left", label: "Étape précédente") { move(to: position - 1) }
-            .disabled(position == 0 || isAdvancing)
-            .accessibilityLabel("Étape précédente").accessibilityIdentifier("cooking.previous")
+            if position > 0 {
+                ChefIconButton(symbol: "arrow.left", label: "Étape précédente") { move(to: position - 1) }
+                    .disabled(isAdvancing)
+                    .accessibilityIdentifier("cooking.previous")
+            } else { Color.clear.frame(width: 44, height: 44).accessibilityHidden(true) }
             Spacer(minLength: 0)
             ChefPrimaryButton(title: actionTitle, symbol: started ? "arrow.right" : step?.timer != nil ? "timer" : "arrow.right") {
                 if started { move(to: min(position + 1, steps.count - 1)) }
@@ -147,9 +163,11 @@ struct CookingView: View {
             .disabled(isAdvancing || (started && position == steps.count - 1))
             .accessibilityIdentifier("cooking.next")
             Spacer(minLength: 0)
-            ChefIconButton(symbol: "arrow.right", label: "Consulter l’étape suivante") { move(to: position + 1) }
-            .disabled(position >= steps.count - 1 || isAdvancing)
-            .accessibilityLabel("Consulter l’étape suivante").accessibilityIdentifier("cooking.skip")
+            if position < steps.count - 1 {
+                ChefIconButton(symbol: "arrow.right", label: "Consulter l’étape suivante") { move(to: position + 1) }
+                    .disabled(isAdvancing)
+                    .accessibilityIdentifier("cooking.skip")
+            } else { Color.clear.frame(width: 44, height: 44).accessibilityHidden(true) }
         }
         .padding(.horizontal, 22).padding(.top, 8).padding(.bottom, 6)
         .frame(maxWidth: DesignSystem.Layout.maximumContentWidth)
@@ -164,20 +182,26 @@ struct CookingView: View {
 
     private func move(to target: Int) {
         guard steps.indices.contains(target), !isAdvancing else { return }
+        guard target != position else { return }
         backwards = target < position
+        lockTransition()
         withAnimation(motion) { index = target }
     }
 
     private func perform(allowingOutOfOrder: Bool = false) {
         guard let step, !isAdvancing else { return }
-        isAdvancing = true
+        lockTransition()
         backwards = false
         withAnimation(motion) {
             cooking.performStep(id: step.id, allowingOutOfOrder: allowingOutOfOrder)
             if position < steps.count - 1 { index = position + 1 }
         }
+    }
+
+    private func lockTransition() {
+        isAdvancing = true
         Task { @MainActor in
-            try? await Task.sleep(for: .milliseconds(460))
+            try? await Task.sleep(for: .milliseconds(580))
             isAdvancing = false
         }
     }
@@ -253,10 +277,22 @@ struct CookingView: View {
     private var completion: some View {
         VStack(spacing: 24) {
             RecipeArtwork(recipeID: cooking.recipe?.id ?? "").frame(height: 250)
-            Text("Recette terminée").font(.title2.weight(.semibold))
-            ChefPrimaryButton(title: "Terminer", symbol: "checkmark") { cooking.dismissCompletedSession(); dismiss() }
-        }.padding(24).accessibilityIdentifier("cooking.completed")
+            Text("À vous de savourer.").font(DesignSystem.Typography.title).fontDesign(.serif).italic()
+                .accessibilityIdentifier("cooking.completed")
+            ChefPrimaryButton(title: "Terminer", symbol: "checkmark", action: onFinished)
+                .accessibilityIdentifier("cooking.finish")
+        }.padding(24)
     }
 
     private func clock(_ seconds: Int) -> String { String(format: "%02d:%02d", seconds / 60, seconds % 60) }
+}
+
+private struct StepArrival: ViewModifier {
+    var offset: CGFloat = 0
+    var opacity: Double = 1
+    var scale: CGFloat = 1
+
+    func body(content: Content) -> some View {
+        content.scaleEffect(scale, anchor: .top).opacity(opacity).offset(y: offset)
+    }
 }

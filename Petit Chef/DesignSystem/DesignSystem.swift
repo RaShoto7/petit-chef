@@ -20,7 +20,8 @@ enum DesignSystem {
     }
 
     enum Typography {
-        static let title = Font.system(.largeTitle, design: .rounded, weight: .bold)
+        static let title = Font.system(.largeTitle, design: .serif, weight: .medium).italic()
+        static let editorial = Font.system(size: 40, weight: .regular, design: .serif).italic()
         static let section = Font.system(.title2, design: .rounded, weight: .bold)
         static let body = Font.system(.body, design: .rounded)
         static let label = Font.system(.subheadline, design: .rounded, weight: .semibold)
@@ -48,15 +49,18 @@ struct TactileButtonStyle: ButtonStyle {
 struct ChefCard<Content: View>: View {
     var tint: Color = .white
     @ViewBuilder var content: Content
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
 
     var body: some View {
         content
-            .background(tint.opacity(0.30), in: RoundedRectangle(cornerRadius: DesignSystem.Layout.cardRadius))
-            .overlay {
-                RoundedRectangle(cornerRadius: DesignSystem.Layout.cardRadius)
-                    .strokeBorder(.black.opacity(0.035), lineWidth: 1)
+            .background {
+                if reduceTransparency {
+                    RoundedRectangle(cornerRadius: DesignSystem.Layout.cardRadius)
+                        .fill(Color(.secondarySystemGroupedBackground))
+                }
             }
-            .shadow(color: DesignSystem.Colors.ink.opacity(0.018), radius: 12, y: 4)
+            .glassEffect(reduceTransparency ? .identity : .clear.tint(tint.opacity(0.12)),
+                         in: .rect(cornerRadius: DesignSystem.Layout.cardRadius))
     }
 }
 

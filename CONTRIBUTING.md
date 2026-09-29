@@ -43,7 +43,7 @@ Options facultatives : `SIMULATOR_ID` pour choisir un simulateur, `PETITCHEF_DER
 
 ## Règles du projet
 
-- SwiftUI pour l’interface, Canvas et Metal pour le dessin animé ; respecter Réduire les animations.
+- SwiftUI pour l’interface, RealityKit pour les gestes 3D des tartines, Canvas et Metal pour les autres illustrations ; respecter Réduire les animations.
 - Durées, dépendances et parallélisation restent dans le moteur déterministe. Ne pas les confier à un modèle de langage.
 - Ajouter une recette dans le catalogue structuré et documenter ses références ; pas de scraping automatique.
 - Ne pas publier de certificats, secrets ou préférences personnelles Xcode. Ne pas modifier l’équipe de signature partagée pour un test simulateur : le script utilise une signature locale indépendante.

@@ -150,6 +150,70 @@ final class Petit_ChefUITests: XCTestCase {
         screenshot(app, "10 — Allergènes")
     }
 
+    @MainActor
+    func testToastDisclosuresNavigationAndCompletion() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing", "-reset-cooking"]
+        app.launch()
+        let toast = app.buttons["home.recipe.tomato-mozzarella-toast"]
+        XCTAssertTrue(toast.waitForExistence(timeout: 8))
+        screenshot(app, "T00 — Accueil italique")
+        toast.tap()
+        XCTAssertTrue(app.staticTexts["recipe.title"].waitForExistence(timeout: 4))
+        screenshot(app, "T01 — Tartines")
+        let steps = app.buttons["recipe.disclosure.steps"]
+        for _ in 0..<5 where !steps.isHittable { app.swipeUp() }
+        let equipment = app.buttons["recipe.disclosure.equipment"]
+        for _ in 0..<3 {
+            steps.tap()
+            XCTAssertEqual(steps.value as? String, "Déplié")
+            XCTAssertTrue(app.staticTexts["Préchauffer le four"].exists)
+            steps.tap()
+            XCTAssertEqual(steps.value as? String, "Replié")
+            for _ in 0..<3 where !equipment.isHittable { app.swipeUp() }
+            equipment.tap()
+            XCTAssertEqual(equipment.value as? String, "Déplié")
+            equipment.tap()
+            XCTAssertEqual(equipment.value as? String, "Replié")
+        }
+        screenshot(app, "T02 — Verre et sections")
+        app.buttons["recipe.start"].tap()
+        assertStep(app, "Préchauffer le four")
+        XCTAssertFalse(app.buttons["cooking.previous"].exists)
+        XCTAssertFalse(app.buttons["cooking.overview"].exists)
+        XCTAssertFalse(app.buttons["cooking.replay"].exists)
+        screenshot(app, "T03 — Four 3D")
+        next(app, "Découper les ingrédients")
+        screenshot(app, "T04 — Découpe 3D")
+        app.buttons["cooking.previous"].tap()
+        assertStep(app, "Préchauffer le four")
+        XCTAssertFalse(app.buttons["cooking.previous"].exists)
+        next(app, "Découper les ingrédients")
+        next(app, "Garnir le pain")
+        screenshot(app, "T05 — Garniture 3D")
+        next(app, "Gratiner les tartines")
+        screenshot(app, "T06 — Gratin 3D")
+        next(app, "Assaisonner les tomates")
+        screenshot(app, "T07 — Mélange 3D")
+        XCTAssertTrue(app.buttons["cooking.timer.edit"].exists)
+        app.buttons["cooking.timer.options"].firstMatch.tap()
+        app.buttons["Terminer maintenant"].tap()
+        app.buttons["Cuisson vérifiée · terminer"].tap()
+        next(app, "Servir les tartines")
+        screenshot(app, "T08 — Dressage 3D")
+        XCTAssertFalse(app.buttons["cooking.skip"].exists)
+        app.buttons["cooking.next"].tap()
+        XCTAssertTrue(app.buttons["cooking.finish"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.buttons["cooking.options"].exists)
+        XCTAssertFalse(app.buttons["cooking.minimize"].exists)
+        screenshot(app, "T09 — Fin épurée")
+        app.buttons["cooking.finish"].tap()
+        XCTAssertTrue(app.staticTexts["home.title"].waitForExistence(timeout: 5))
+        XCTAssertTrue(toast.isHittable)
+        XCTAssertFalse(app.staticTexts["recipe.title"].exists)
+        XCTAssertFalse(app.buttons["home.resume"].exists)
+    }
+
     private func coloredFraction(_ image: UIImage) throws -> Double {
         let cgImage = try XCTUnwrap(image.cgImage)
         let width = cgImage.width
