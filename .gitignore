@@ -1,0 +1,18 @@
+.DS_Store
+DerivedData/
+build/
+*.xcresult
+xcuserdata/
+*.xcuserstate
+
+# Local configuration and signing material
+.env
+.env.*
+!.env.example
+*.p12
+*.p8
+*.mobileprovision
+*.cer
+*.key
+*.pem
+Signing.local.xcconfig

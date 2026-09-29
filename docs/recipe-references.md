@@ -1,0 +1,9 @@
+# Références culinaires — 28 septembre 2026
+
+Les recettes Petit Chef sont des adaptations éditoriales originales, structurées pour un parcours guidé. Les sources servent à vérifier les techniques et les ordres de grandeur ; leurs textes et photos ne sont pas repris. Elles n’ont pas encore été testées physiquement dans cette version.
+
+- **Burger et frites** : [Papilles & Pupilles, frites au four](https://www.papillesetpupilles.fr/2020/12/comment-faire-des-frites-au-four-maison.html/) décrit 230 °C et deux cuissons de 15 min. Petit Chef retient 600 g pour deux portions, une seule couche sur la plaque, et prépare la garniture et la viande pendant la cuisson. Estimation globale 50 min, dont environ 15 min de préparation et 30 min de four. Adapter à l’épaisseur, au four et au nombre de plaques. Le temps ne certifie jamais la cuisson de la viande.
+- **Pâtes au citron** : [Le Creuset, Spaghetti al limone](https://www.lecreuset.com/spaghetti-al-limone/LCR-2732.html) confirme la liaison beurre, citron et eau amidonnée ; [Jamie Oliver, Lemon & basil spaghetti](https://www.jamieoliver.com/recipes/pasta/lemon-basil-spaghetti/) documente l’association citron, parmesan et basilic. Adaptation à 200 g de pâtes pour deux personnes. Les 20 min incluent la chauffe de l’eau ; le minuteur de 8 min est ajustable selon le paquet.
+- **Tartines tomate et mozzarella** : [Galbani, bruschetta au four](https://www.galbani.fr/recettes/bruschetta-et-tartines/bruschetta-a-litalienne) donne un passage au four de 5 à 10 min. Adaptation Petit Chef avec tomates ajoutées à la sortie pour préserver leur fraîcheur, contrôle à 8 min et total indicatif 20 min.
+
+Modifier les ingrédients ne réécrit pas automatiquement le protocole de cuisson. Les allergènes affichés sont ceux de la version de référence ; la fiche indique de vérifier produits et modifications. Changer le nombre de personnes ajuste les quantités, jamais les températures ni les durées proportionnellement.

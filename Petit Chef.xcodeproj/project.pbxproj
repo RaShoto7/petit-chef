@@ -6,6 +6,10 @@
 	objectVersion = 110;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		A13C0000000000000000000C /* CookingWidgets.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = A13C00000000000000000002 /* CookingWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		531C21D6306AE5FE00F949C2 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -21,17 +25,57 @@
 			remoteGlobalIDString = 531C21C5306AE5FE00F949C2;
 			remoteInfo = "Petit Chef";
 		};
+		A13C0000000000000000000E /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 531C21BE306AE5FE00F949C2 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = A13C00000000000000000001;
+			remoteInfo = CookingWidgets;
+		};
 /* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		A13C0000000000000000000B /* Embed App Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			dstPath = "";
+			dstSubfolder = PlugIns;
+			files = (
+				A13C0000000000000000000C /* CookingWidgets.appex in Embed App Extensions */,
+			);
+			name = "Embed App Extensions";
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		531C21C6306AE5FE00F949C2 /* Petit Chef.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Petit Chef.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		531C21D5306AE5FE00F949C2 /* Petit ChefTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Petit ChefTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		531C21DF306AE5FE00F949C2 /* Petit ChefUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Petit ChefUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		A13C00000000000000000002 /* CookingWidgets.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; path = CookingWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		A13C0000000000000000000F /* Exceptions for "Petit Chef" folder in "Petit Chef" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 531C21C5306AE5FE00F949C2 /* Petit Chef */;
+		};
+		A13C00000000000000000010 /* Exceptions for "CookingWidgets" folder in "CookingWidgets" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = A13C00000000000000000001 /* CookingWidgets */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		531C21C8306AE5FE00F949C2 /* Petit Chef */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				A13C0000000000000000000F /* Exceptions for "Petit Chef" folder in "Petit Chef" target */,
+			);
 			path = "Petit Chef";
 			sourceTree = "<group>";
 		};
@@ -43,6 +87,19 @@
 		531C21E2306AE5FE00F949C2 /* Petit ChefUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = "Petit ChefUITests";
+			sourceTree = "<group>";
+		};
+		A13C00000000000000000003 /* CookingWidgets */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				A13C00000000000000000010 /* Exceptions for "CookingWidgets" folder in "CookingWidgets" target */,
+			);
+			path = CookingWidgets;
+			sourceTree = "<group>";
+		};
+		A13C00000000000000000004 /* Shared */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Shared;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -63,6 +120,11 @@
 			files = (
 			);
 		};
+		A13C00000000000000000006 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			files = (
+			);
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -72,6 +134,8 @@
 				531C21C8306AE5FE00F949C2 /* Petit Chef */,
 				531C21D8306AE5FE00F949C2 /* Petit ChefTests */,
 				531C21E2306AE5FE00F949C2 /* Petit ChefUITests */,
+				A13C00000000000000000003 /* CookingWidgets */,
+				A13C00000000000000000004 /* Shared */,
 				531C21C7306AE5FE00F949C2 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -79,6 +143,7 @@
 		531C21C7306AE5FE00F949C2 /* Products */ = {
 			isa = PBXGroup;
 			children = (
+				A13C00000000000000000002 /* CookingWidgets.appex */,
 				531C21C6306AE5FE00F949C2 /* Petit Chef.app */,
 				531C21D5306AE5FE00F949C2 /* Petit ChefTests.xctest */,
 				531C21DF306AE5FE00F949C2 /* Petit ChefUITests.xctest */,
@@ -96,11 +161,16 @@
 				531C21C2306AE5FE00F949C2 /* Sources */,
 				531C21C3306AE5FE00F949C2 /* Frameworks */,
 				531C21C4306AE5FE00F949C2 /* Resources */,
+				A13C0000000000000000000B /* Embed App Extensions */,
 			);
 			buildRules = (
 			);
+			dependencies = (
+				A13C0000000000000000000D /* PBXTargetDependency */,
+			);
 			fileSystemSynchronizedGroups = (
 				531C21C8306AE5FE00F949C2 /* Petit Chef */,
+				A13C00000000000000000004 /* Shared */,
 			);
 			name = "Petit Chef";
 			productName = "Petit Chef";
@@ -149,6 +219,25 @@
 			productReference = 531C21DF306AE5FE00F949C2 /* Petit ChefUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
+		A13C00000000000000000001 /* CookingWidgets */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A13C00000000000000000008 /* Build configuration list for PBXNativeTarget "CookingWidgets" */;
+			buildPhases = (
+				A13C00000000000000000005 /* Sources */,
+				A13C00000000000000000006 /* Frameworks */,
+				A13C00000000000000000007 /* Resources */,
+			);
+			buildRules = (
+			);
+			fileSystemSynchronizedGroups = (
+				A13C00000000000000000003 /* CookingWidgets */,
+				A13C00000000000000000004 /* Shared */,
+			);
+			name = CookingWidgets;
+			productName = CookingWidgets;
+			productReference = A13C00000000000000000002 /* CookingWidgets.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -161,6 +250,11 @@
 				TargetAttributes = {
 					531C21C5306AE5FE00F949C2 = {
 						CreatedOnToolsVersion = 27.0;
+						SystemCapabilities = {
+							com.apple.SignInWithApple = {
+								enabled = 1;
+							};
+						};
 					};
 					531C21D4306AE5FE00F949C2 = {
 						CreatedOnToolsVersion = 27.0;
@@ -173,9 +267,10 @@
 				};
 			};
 			buildConfigurationList = 531C21C1306AE5FE00F949C2 /* Build configuration list for PBXProject "Petit Chef" */;
-			developmentRegion = en;
+			developmentRegion = fr;
 			hasScannedForEncodings = 0;
 			knownRegions = (
+				fr,
 				en,
 				Base,
 			);
@@ -186,6 +281,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
+				A13C00000000000000000001 /* CookingWidgets */,
 				531C21C5306AE5FE00F949C2 /* Petit Chef */,
 				531C21D4306AE5FE00F949C2 /* Petit ChefTests */,
 				531C21DE306AE5FE00F949C2 /* Petit ChefUITests */,
@@ -209,6 +305,11 @@
 			files = (
 			);
 		};
+		A13C00000000000000000007 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			files = (
+			);
+		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -227,6 +328,11 @@
 			files = (
 			);
 		};
+		A13C00000000000000000005 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			files = (
+			);
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -239,6 +345,11 @@
 			isa = PBXTargetDependency;
 			target = 531C21C5306AE5FE00F949C2 /* Petit Chef */;
 			targetProxy = 531C21E0306AE5FE00F949C2 /* PBXContainerItemProxy */;
+		};
+		A13C0000000000000000000D /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = A13C00000000000000000001 /* CookingWidgets */;
+			targetProxy = A13C0000000000000000000E /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -369,11 +480,14 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = "Petit Chef/PetitChef.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 46977U9P45;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Petit Chef/Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = "Petit Chef";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -383,7 +497,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 0.3;
 				PRODUCT_BUNDLE_IDENTIFIER = "com.rafael.Petit-Chef";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -401,11 +515,14 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = "Petit Chef/PetitChef.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 46977U9P45;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Petit Chef/Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = "Petit Chef";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -415,7 +532,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 0.3;
 				PRODUCT_BUNDLE_IDENTIFIER = "com.rafael.Petit-Chef";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -437,7 +554,7 @@
 				DEVELOPMENT_TEAM = 46977U9P45;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 0.3;
 				PRODUCT_BUNDLE_IDENTIFIER = "com.rafael.Petit-ChefTests";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
@@ -459,7 +576,7 @@
 				DEVELOPMENT_TEAM = 46977U9P45;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 0.3;
 				PRODUCT_BUNDLE_IDENTIFIER = "com.rafael.Petit-ChefTests";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
@@ -479,7 +596,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 46977U9P45;
 				GENERATE_INFOPLIST_FILE = YES;
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 0.3;
 				PRODUCT_BUNDLE_IDENTIFIER = "com.rafael.Petit-ChefUITests";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
@@ -499,7 +616,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 46977U9P45;
 				GENERATE_INFOPLIST_FILE = YES;
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 0.3;
 				PRODUCT_BUNDLE_IDENTIFIER = "com.rafael.Petit-ChefUITests";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
@@ -509,6 +626,58 @@
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				TEST_TARGET_NAME = "Petit Chef";
+			};
+			name = Release;
+		};
+		A13C00000000000000000009 /* Debug configuration for PBXNativeTarget "CookingWidgets" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 46977U9P45;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = CookingWidgets/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Petit Chef";
+				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 0.3;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.rafael.Petit-Chef.CookingWidgets";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		A13C0000000000000000000A /* Release configuration for PBXNativeTarget "CookingWidgets" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 46977U9P45;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = CookingWidgets/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Petit Chef";
+				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 0.3;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.rafael.Petit-Chef.CookingWidgets";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Release;
 		};
@@ -544,6 +713,14 @@
 			buildConfigurations = (
 				531C21EE306AE5FE00F949C2 /* Debug configuration for PBXNativeTarget "Petit ChefUITests" */,
 				531C21EF306AE5FE00F949C2 /* Release configuration for PBXNativeTarget "Petit ChefUITests" */,
+			);
+			defaultConfigurationName = Release;
+		};
+		A13C00000000000000000008 /* Build configuration list for PBXNativeTarget "CookingWidgets" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A13C00000000000000000009 /* Debug configuration for PBXNativeTarget "CookingWidgets" */,
+				A13C0000000000000000000A /* Release configuration for PBXNativeTarget "CookingWidgets" */,
 			);
 			defaultConfigurationName = Release;
 		};

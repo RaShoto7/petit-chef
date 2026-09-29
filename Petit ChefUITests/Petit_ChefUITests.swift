@@ -1,43 +1,235 @@
-//
-//  Petit_ChefUITests.swift
-//  Petit ChefUITests
-//
-//  Created by Rafaël on 28/09/2026.
-//
-
 import XCTest
+import UIKit
 
 final class Petit_ChefUITests: XCTestCase {
-
-    override func setUpWithError() throws {
-        // Put setup code here. This method is called before the invocation of each test method in the class.
-
-        // In UI tests it is usually best to stop immediately when a failure occurs.
-        continueAfterFailure = false
-
-        // In UI tests it’s important to set the initial state - such as interface orientation - required for your tests before they run. The setUp method is a good place to do this.
-    }
-
-    override func tearDownWithError() throws {
-        // Put teardown code here. This method is called after the invocation of each test method in the class.
-    }
+    override func setUpWithError() throws { continueAfterFailure = false }
 
     @MainActor
-    func testExample() throws {
-        // UI tests must launch the application that they test.
+    func testCustomRecipeAndFlexibleCookingSurviveRelaunch() throws {
         let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing", "-reset-cooking"]
         app.launch()
-
-        // Use XCTAssert and related functions to verify your tests produce the correct results.
-        // XCUIAutomation Documentation
-        // https://developer.apple.com/documentation/xcuiautomation
+        let recipe = app.buttons["home.recipe.burger-and-oven-fries"]
+        XCTAssertTrue(recipe.waitForExistence(timeout: 8))
+        XCTAssertEqual(app.tabBars.count, 0)
+        XCTAssertEqual(app.staticTexts["home.title"].label, "mes recettes.")
+        screenshot(app, "01 — Mes recettes")
+        recipe.tap()
+        XCTAssertTrue(app.staticTexts["recipe.title"].waitForExistence(timeout: 4))
+        screenshot(app, "02 — Recette")
+        app.buttons["recipe.servings.plus"].tap()
+        XCTAssertEqual(app.staticTexts["recipe.servings.value"].label, "3 pers.")
+        XCTAssertEqual(app.staticTexts["ingredient.quantity.potatoes"].label, "900 g")
+        app.buttons["recipe.ingredients.edit"].tap()
+        app.buttons["ingredients.row.potatoes"].tap()
+        let name = app.textFields["ingredients.name.potatoes"]
+        XCTAssertTrue(name.waitForExistence(timeout: 4))
+        name.tap()
+        name.press(forDuration: 1.2)
+        if app.menuItems["Tout sélectionner"].waitForExistence(timeout: 1) { app.menuItems["Tout sélectionner"].tap() }
+        // Update via the standard text field; retain the original ingredient's stable identity.
+        name.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: 40) + "Pommes de terre Agria")
+        screenshot(app, "03 — Ingrédient ciblé")
+        app.buttons["ingredients.apply"].tap()
+        app.buttons["ingredients.undo"].tap()
+        XCTAssertTrue(app.buttons["ingredients.row.potatoes"].label.contains("Pommes de terre"))
+        XCTAssertFalse(app.buttons["ingredients.row.potatoes"].label.contains("Agria"))
+        app.buttons["ingredients.redo"].tap()
+        XCTAssertTrue(app.buttons["ingredients.row.potatoes"].label.contains("Agria"))
+        screenshot(app, "03b — Liste des ingrédients")
+        app.buttons["ingredients.save"].tap()
+        app.buttons["recipe.start"].tap()
+        assertStep(app, "Préchauffer le four")
+        screenshot(app, "04 — Préchauffage")
+        next(app, "Couper les frites")
+        screenshot(app, "05 — Découpe")
+        app.buttons["cooking.previous"].tap()
+        assertStep(app, "Préchauffer le four")
+        next(app, "Couper les frites")
+        next(app, "Rincer et sécher")
+        next(app, "Enfourner les frites")
+        next(app, "Préparer la garniture")
+        XCTAssertTrue(app.staticTexts["Frites · première cuisson"].exists)
+        next(app, "Retourner les frites")
+        // The countdown does not block reading or preparing a later step.
+        app.buttons["cooking.skip"].tap()
+        assertStep(app, "Cuire les steaks")
+        screenshot(app, "06 — Navigation pendant la cuisson")
+        app.buttons["cooking.previous"].tap()
+        assertStep(app, "Retourner les frites")
+        app.buttons["cooking.timer.options"].firstMatch.tap()
+        app.buttons["Retirer 1 minute"].tap()
+        let timer = app.buttons["cooking.timer.edit"].firstMatch
+        XCTAssertTrue(timer.exists)
+        let before = timer.value as? String ?? ""
+        XCTAssertTrue(before.hasPrefix("13:") || before.hasPrefix("14:"))
+        timer.tap()
+        let wheels = app.pickerWheels
+        XCTAssertEqual(wheels.count, 3)
+        wheels.element(boundBy: 0).adjust(toPickerWheelValue: "0")
+        wheels.element(boundBy: 1).adjust(toPickerWheelValue: "5")
+        wheels.element(boundBy: 2).adjust(toPickerWheelValue: "30")
+        screenshot(app, "06b — Réglage du minuteur")
+        app.buttons["timer.apply"].tap()
+        XCTAssertTrue((timer.value as? String ?? "").hasPrefix("05:"))
+        app.buttons["cooking.minimize"].tap()
+        app.terminate()
+        app.launchArguments = ["-ui-testing"]
+        app.launch()
+        XCTAssertTrue(app.buttons["home.resume"].waitForExistence(timeout: 6))
+        app.buttons["home.resume"].tap()
+        XCTAssertTrue(app.staticTexts["Frites · première cuisson"].waitForExistence(timeout: 4))
+        screenshot(app, "07 — Minuteur restauré")
+        app.buttons["cooking.timer.options"].firstMatch.tap()
+        app.buttons["Terminer maintenant"].tap()
+        app.buttons["Cuisson vérifiée · terminer"].tap()
+        XCTAssertFalse(app.staticTexts["Frites · première cuisson"].exists)
+        app.buttons["cooking.minimize"].tap()
+        app.buttons["home.account"].tap()
+        XCTAssertTrue(app.buttons["settings.signInWithApple"].waitForExistence(timeout: 4))
+        XCTAssertTrue(app.buttons["settings.signInWithApple"].isHittable)
+        XCTAssertFalse(app.switches["settings.chefTips"].exists)
+        screenshot(app, "08 — Profil et réglages")
+        app.buttons["settings.close"].tap()
+        recipe.tap()
+        XCTAssertEqual(app.staticTexts["recipe.servings.value"].label, "3 pers.")
+        XCTAssertTrue(app.staticTexts["Pommes de terre Agria"].exists)
     }
 
     @MainActor
-    func testLaunchPerformance() throws {
-        // This measures how long it takes to launch your application.
-        measure(metrics: [XCTApplicationLaunchMetric()]) {
-            XCUIApplication().launch()
+    func testIngredientAdditionAndRemoval() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing", "-reset-cooking"]
+        app.launch()
+        app.buttons["home.recipe.burger-and-oven-fries"].tap()
+        app.buttons["recipe.ingredients.edit"].tap()
+        let add = app.buttons["ingredients.add"]
+        for _ in 0..<6 where !add.isHittable { app.swipeUp() }
+        XCTAssertTrue(add.isHittable)
+        add.tap()
+        let name = app.textFields.matching(NSPredicate(format: "identifier BEGINSWITH 'ingredients.name.custom-'")).firstMatch
+        for _ in 0..<3 where !name.isHittable { app.swipeUp() }
+        XCTAssertTrue(name.isHittable)
+        name.tap()
+        name.typeText("Cornichons")
+        app.buttons["ingredients.apply"].tap()
+        app.buttons["ingredients.save"].tap()
+        XCTAssertTrue(app.staticTexts["Cornichons"].exists)
+        app.buttons["recipe.ingredients.edit"].tap()
+        let row = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'ingredients.row.custom-'")).firstMatch
+        for _ in 0..<6 where !row.isHittable { app.swipeUp() }
+        XCTAssertTrue(row.isHittable)
+        row.tap()
+        app.buttons["ingredients.delete"].tap()
+        XCTAssertTrue(app.buttons["ingredients.save"].isEnabled)
+        app.buttons["ingredients.save"].tap()
+        XCTAssertFalse(app.staticTexts["Cornichons"].exists)
+        XCTAssertTrue(app.staticTexts["Pommes de terre"].exists)
+    }
+
+    @MainActor
+    func testRecipeIllustrationsRemainVisibleAfterTheirEntrance() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing", "-reset-cooking"]
+        app.launch()
+        let burger = app.buttons["home.recipe.burger-and-oven-fries"]
+        XCTAssertTrue(burger.waitForExistence(timeout: 8))
+        for id in ["burger-and-oven-fries", "lemon-pasta", "tomato-mozzarella-toast"] {
+            let card = app.buttons["home.recipe.\(id)"]
+            // Check rendered pixels, not just the presence of an Image view: a shader can hide it.
+            XCTAssertGreaterThan(try coloredFraction(card.screenshot().image), 0.025, "Illustration invisible : \(id)")
         }
+        screenshot(app, "01 — Mes recettes")
+        burger.tap()
+        XCTAssertTrue(app.staticTexts["recipe.title"].waitForExistence(timeout: 4))
+        screenshot(app, "02 — Recette")
+        app.swipeUp()
+        app.swipeUp()
+        XCTAssertTrue(app.staticTexts["Allergènes"].exists)
+        XCTAssertFalse(app.staticTexts["Références de la recette"].exists)
+        screenshot(app, "10 — Allergènes")
+    }
+
+    private func coloredFraction(_ image: UIImage) throws -> Double {
+        let cgImage = try XCTUnwrap(image.cgImage)
+        let width = cgImage.width
+        let height = cgImage.height
+        var pixels = [UInt8](repeating: 0, count: width * height * 4)
+        let count: Int = try pixels.withUnsafeMutableBytes { bytes in
+            let context = try XCTUnwrap(CGContext(data: bytes.baseAddress, width: width, height: height,
+                bitsPerComponent: 8, bytesPerRow: width * 4, space: CGColorSpaceCreateDeviceRGB(),
+                bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue))
+            context.draw(cgImage, in: CGRect(x: 0, y: 0, width: width, height: height))
+            let values = bytes.bindMemory(to: UInt8.self)
+            var colored = 0
+            for index in stride(from: 0, to: values.count, by: 4) {
+                let channels = [Int(values[index]), Int(values[index + 1]), Int(values[index + 2])]
+                if channels.max()! - channels.min()! > 35 { colored += 1 }
+            }
+            return colored
+        }
+        return Double(count) / Double(width * height)
+    }
+
+    @MainActor
+    func testSystemTimerAuthorizationAndBackground() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing", "-reset-cooking", "-system-alarm-testing"]
+        app.launch()
+        app.buttons["home.recipe.burger-and-oven-fries"].tap()
+        app.buttons["recipe.start"].tap()
+        assertStep(app, "Préchauffer le four")
+        next(app, "Couper les frites")
+        next(app, "Rincer et sécher")
+        next(app, "Enfourner les frites")
+        next(app, "Préparer la garniture")
+        let springboard = XCUIApplication(bundleIdentifier: "com.apple.springboard")
+        let permission = springboard.alerts.firstMatch
+        if permission.waitForExistence(timeout: 5) {
+            let allow = permission.buttons.matching(NSPredicate(format: "label == 'Allow' OR label == 'Autoriser' OR label == 'OK'")).firstMatch
+            XCTAssertTrue(allow.exists, springboard.debugDescription)
+            allow.tap()
+        }
+        if app.images["cooking.timer.muted"].exists {
+            app.buttons["cooking.options"].tap()
+            app.buttons["Arrêter la recette"].tap()
+            app.buttons["Arrêter et annuler les minuteurs"].tap()
+            throw XCTSkip("AlarmKit non autorisé par le simulateur ; activité système à vérifier sur un appareil autorisé.")
+        }
+        // Foreground -> background renders the system-managed countdown, not an in-app mock.
+        XCUIDevice.shared.press(.home)
+        XCTAssertTrue(springboard.wait(for: .runningForeground, timeout: 5))
+        _ = springboard.icons.firstMatch.waitForExistence(timeout: 5)
+        let capture = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        capture.name = "09 — Dynamic Island système"
+        capture.lifetime = .keepAlways
+        add(capture)
+        print("SYSTEM ISLAND STATE: \(springboard.debugDescription)")
+        app.activate()
+        XCTAssertFalse(app.staticTexts.containing(NSPredicate(format: "label CONTAINS 'n’a pas pu être programmé'")).firstMatch.exists)
+        app.buttons["cooking.options"].tap()
+        app.buttons["Arrêter la recette"].tap()
+        app.buttons["Arrêter et annuler les minuteurs"].tap()
+    }
+
+    @MainActor private func next(_ app: XCUIApplication, _ title: String) {
+        let button = app.buttons["cooking.next"]
+        expectation(for: NSPredicate(format: "enabled == true"), evaluatedWith: button)
+        waitForExpectations(timeout: 4)
+        button.tap()
+        assertStep(app, title)
+    }
+
+    @MainActor private func assertStep(_ app: XCUIApplication, _ title: String) {
+        let label = app.staticTexts["cooking.step.title"]
+        expectation(for: NSPredicate(format: "label == %@", title), evaluatedWith: label)
+        waitForExpectations(timeout: 5)
+    }
+
+    @MainActor private func screenshot(_ app: XCUIApplication, _ name: String) {
+        let attachment = XCTAttachment(screenshot: app.screenshot())
+        attachment.name = name
+        attachment.lifetime = .keepAlways
+        add(attachment)
     }
 }

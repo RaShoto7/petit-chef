@@ -1,32 +1,51 @@
-//
-//  Petit_ChefApp.swift
-//  Petit Chef
-//
-//  Created by Rafaël on 28/09/2026.
-//
-
 import SwiftUI
-import SwiftData
 
 @main
 struct Petit_ChefApp: App {
-    var sharedModelContainer: ModelContainer = {
-        let schema = Schema([
-            Item.self,
-        ])
-        let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
+    @State private var cooking = Petit_ChefApp.makeCookingStore()
+    @State private var account = AccountStore()
+    @State private var library = RecipeLibrary(defaults: ProcessInfo.processInfo.arguments.contains("-ui-testing") ? UserDefaults(suiteName: "com.rafael.PetitChef.UITests")! : .standard)
+    @Environment(\.scenePhase) private var scenePhase
 
-        do {
-            return try ModelContainer(for: schema, configurations: [modelConfiguration])
-        } catch {
-            fatalError("Could not create ModelContainer: \(error)")
+    private static func makeCookingStore() -> CookingStore {
+        #if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("-ui-testing"),
+           let defaults = UserDefaults(suiteName: "com.rafael.PetitChef.UITests") {
+            if ProcessInfo.processInfo.arguments.contains("-reset-cooking") {
+                defaults.removePersistentDomain(forName: "com.rafael.PetitChef.UITests")
+            }
+            let systemAlarmTest = ProcessInfo.processInfo.arguments.contains("-system-alarm-testing")
+            defaults.set(systemAlarmTest, forKey: "petitchef.cooking.session.v1.notificationsEnabled")
+            if systemAlarmTest {
+                return CookingStore(defaults: defaults, notifications: CookingAlarms(), automaticallyRequestsPermission: true)
+            }
+            return CookingStore(defaults: defaults)
         }
-    }()
+        #endif
+        return CookingStore()
+    }
 
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .environment(cooking)
+                .environment(account)
+                .environment(library)
+                .preferredColorScheme(.light)
+                .tint(DesignSystem.Colors.ink)
+                .fontDesign(.rounded)
+                .task {
+                    await account.refreshCredentialState()
+                    await cooking.refreshNotifications()
+                }
+                .onChange(of: scenePhase) { _, phase in
+                    if phase == .active {
+                        Task {
+                            await account.refreshCredentialState()
+                            await cooking.refreshNotifications()
+                        }
+                    }
+                }
         }
-        .modelContainer(sharedModelContainer)
     }
 }

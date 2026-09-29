@@ -1,0 +1,38 @@
+name: iOS
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: ios-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  simulator:
+    name: Build et tests iOS 27
+    runs-on: xcode-27
+    timeout-minutes: 25
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_27.0.app/Contents/Developer
+      PETITCHEF_DERIVED_DATA: ${{ runner.temp }}/PetitChefDerivedData
+      PETITCHEF_TEST_RESULTS: ${{ runner.temp }}/PetitChef.xcresult
+    steps:
+      - uses: actions/checkout@v4
+      - name: Préparer Metal
+        run: |
+          xcodebuild -version
+          if ! xcrun metal --version >/dev/null 2>&1; then
+            xcodebuild -downloadComponent MetalToolchain
+          fi
+      - name: Compiler et tester
+        run: ./scripts/simulator.sh test
+      - name: Conserver les résultats
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: resultats-ios
+          path: ${{ runner.temp }}/PetitChef.xcresult
+          retention-days: 7
+          if-no-files-found: ignore
