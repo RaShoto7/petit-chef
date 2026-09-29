@@ -5,6 +5,7 @@ struct HomeView: View {
     @Binding var showCooking: Bool
     @Binding var path: [String]
     var openSettings: () -> Void
+    @ScaledMetric(relativeTo: .largeTitle) private var headingSize = 42
     @Namespace private var recipeTransition
 
     var body: some View {
@@ -12,8 +13,10 @@ struct HomeView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
                     Text("mes recettes.")
-                        .font(DesignSystem.Typography.editorial)
-                        .tracking(-1.2)
+                        .font(.system(size: headingSize, weight: .medium, design: .default).italic())
+                        .fontDesign(.default)
+                        .italic()
+                        .tracking(-1.5)
                         .accessibilityAddTraits(.isHeader)
                         .accessibilityIdentifier("home.title")
                     if cooking.hasActiveSession { resumeCard }

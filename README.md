@@ -18,14 +18,14 @@ Prérequis : **Xcode 27**, **iOS 27 Simulator** et **Metal Toolchain**. Le scrip
 
 ## Direction visuelle : tartines
 
-Titres en serif italique, cartes Liquid Glass plus transparentes, dépliage stable des sections et transitions verticales entre les étapes. Les six préparations des tartines disposent de scènes 3D RealityKit. Les commandes inutiles disparaissent au début et à la fin ; **Terminer** revient directement à l’accueil. [Choix de rendu et limites](docs/design/tartines-premium.md).
+Accueil en italique sans empattements, titres de recette en serif, cartes Liquid Glass transparentes et sections au dépliage stable. Les six préparations des tartines utilisent des croquis vectoriels animés. Chaque transition sépare le départ, une courte respiration et l’arrivée ; le geste commence ensuite. Les commandes inutiles disparaissent au début et à la fin ; **Terminer** revient directement à l’accueil. [Choix de rendu et limites](docs/design/tartines-premium.md).
 
 ## Version 0.4
 
 - **mes recettes.** : grille de deux cartes par ligne, fond blanc, illustrations originales en croquis et touches de pinceau diagonales. Le profil est le seul accès aux réglages ; aucune barre d’onglets.
 - **Fiche** : bouton compact « C’est parti », quantités pour 1 à 12 personnes, ingrédients modifiables un par un (nom, quantité, unité, ajout, suppression), annuler/rétablir, matériel et allergènes avec pictogrammes dessinés. Les références restent dans la documentation.
 - **Étapes** : texte neutre, gestes animés correspondant à l’action, navigation précédente/suivante et sommaire. Consulter une étape n’effectue aucune action et ne relance aucun minuteur.
-- **Liberté de préparation** : une étape peut être effectuée en avance après confirmation de ses prérequis manquants. Le moteur mémorise cette décision. Une cuisson peut être raccourcie, prolongée, réglée directement en heures/minutes/secondes en touchant le chrono, ou terminée explicitement avant l’échéance.
+- **Liberté de préparation** : une étape peut être effectuée en avance après confirmation de ses prérequis manquants. Le moteur mémorise cette décision. Une cuisson peut être raccourcie, prolongée, réglée directement en heures/minutes/secondes en touchant le chrono, ou arrêtée en un tap sur la croix, sans confirmation supplémentaire.
 - **Minuteurs système** : AlarmKit, extension WidgetKit de compte à rebours pour la Dynamic Island et l’écran verrouillé. Une seule source de vérité pour les échéances ; pas de compteur décrémenté en mémoire.
 - **Compte** : Sign in with Apple facultatif, identité locale dans le trousseau ; réglages °C/°F et retours tactiles.
 
@@ -54,14 +54,14 @@ Si la signature signale « resource fork / Finder information », placer Derived
 - `Cooking/CookingAlarms.swift` : autorisation et programmation AlarmKit, inventaire local des alarmes appartenant aux sessions de l’app. Une alarme arrêtée dans l’interface système n’est pas recréée sans modification explicite de sa durée et ne marque pas automatiquement un aliment comme cuit.
 - `Shared/` : métadonnées AlarmKit et App Intent communs à l’app et à l’extension.
 - `CookingWidgets/` : présentation du compte à rebours en activité en direct, Dynamic Island compacte, étendue et minimale.
-- `Illustrations/` : illustrations du catalogue, scènes RealityKit des tartines et gestes Canvas des autres recettes (60 images/s demandées, 30 en économie d’énergie pour Canvas). Réduire les animations affiche une pose fixe. `Shaders/` : révélation au pinceau, grain fixe et chaleur en Metal.
+- `Illustrations/` : illustrations du catalogue, gestes dessinés en Canvas, dont six scènes détaillées pour les tartines (60 images/s demandées, 30 en économie d’énergie pour Canvas). Réduire les animations affiche une pose fixe. `Shaders/` : révélation au pinceau, grain fixe et chaleur en Metal.
 - `Features/` : accueil, fiche, éditeur d’ingrédients, cuisine et paramètres.
 
 Les préférences d’ingrédients ne modifient pas une session déjà commencée. Elles ne réécrivent pas non plus les instructions culinaires. Les durées et températures ne sont pas multipliées avec les portions. Les allergènes restent une information de référence à vérifier après toute substitution.
 
 ## Vérification
 
-21 tests unitaires et 4 parcours UI (personnalisation/navigation/reprise, ajout/suppression, contrôle des illustrations rendues et parcours complet des tartines) passent sur iPhone 18 Pro Simulator, iOS 27. Les tests UI ordinaires utilisent un stockage séparé et des notifications locales désactivées. Le test `testSystemTimerAuthorizationAndBackground` exerce séparément AlarmKit réel, avec son autorisation système, puis annule le minuteur. Ce contrôle a été ignoré explicitement sur ce simulateur : AlarmKit refuse l’autorisation, y compris après compilation signée localement. L’affichage réel de la Dynamic Island n’est donc pas encore validé.
+La suite comprend 21 tests unitaires et 4 parcours UI (personnalisation/navigation/reprise, ajout/suppression, illustrations et tartines). Pour cette itération visuelle, les parcours burger et tartines ont été revérifiés sur iPhone 18 Pro Simulator, iOS 27. Les tests UI ordinaires utilisent un stockage séparé et des notifications locales désactivées. Le test `testSystemTimerAuthorizationAndBackground` exerce séparément AlarmKit réel, avec son autorisation système, puis annule le minuteur. Ce contrôle a été ignoré explicitement sur ce simulateur : AlarmKit refuse l’autorisation, y compris après compilation signée localement. L’affichage réel de la Dynamic Island n’est donc pas encore validé.
 
 ```sh
 xcodebuild -project 'Petit Chef.xcodeproj' -scheme 'Petit Chef' \
@@ -82,4 +82,4 @@ Captures : [accueil](docs/screenshots/v0.4/home.png), [fiche](docs/screenshots/v
 - [Apple : programmer une alarme](https://developer.apple.com/documentation/alarmkit/scheduling-an-alarm-with-alarmkit).
 - [Apple : Liquid Glass](https://developer.apple.com/documentation/SwiftUI/Applying-Liquid-Glass-to-custom-views).
 
-La connexion Apple et le comportement complet des alarmes sur appareil verrouillé restent à valider sur un iPhone signé. Voix et IA locale MLX ne sont pas intégrées. Les scènes 3D concernent les tartines ; leur rendu reste illustratif. Le tag `v1.0` sera créé lorsque la Phase 1 sera validée ; la version actuelle reste une version de développement.
+La connexion Apple et le comportement complet des alarmes sur appareil verrouillé restent à valider sur un iPhone signé. Voix et IA locale MLX ne sont pas intégrées. Les gestes restent des illustrations : ils ne remplacent pas les instructions culinaires. Le tag `v1.0` sera créé lorsque la Phase 1 sera validée ; la version actuelle reste une version de développement.
