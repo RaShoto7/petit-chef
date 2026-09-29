@@ -150,6 +150,57 @@ final class Petit_ChefUITests: XCTestCase {
         screenshot(app, "10 — Allergènes")
     }
 
+    @MainActor
+    func testTomatoToastGesturesDoNotAdvanceCookingOrStartTimers() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing", "-reset-cooking"]
+        app.launch()
+        let recipe = app.buttons["home.recipe.tomato-mozzarella-toast"]
+        XCTAssertTrue(recipe.waitForExistence(timeout: 20))
+        recipe.tap()
+        app.buttons["recipe.start"].tap()
+        let steps: [(String, [String])] = [
+            ("Préchauffer le four", ["preheat", "bread"]),
+            ("Découper les ingrédients", ["dice", "mozzarella", "garlic"]),
+            ("Garnir le pain", ["rub", "oil", "layer"]),
+            ("Gratiner les tartines", ["bake", "check"]),
+            ("Assaisonner les tomates", ["season", "mix"]),
+            ("Servir les tartines", ["top", "finish"])
+        ]
+        for (index, entry) in steps.enumerated() {
+            assertStep(app, entry.0)
+            for gesture in entry.1 {
+                let button = app.buttons["toast.gesture.\(gesture)"]
+                for _ in 0..<3 where !button.isHittable { app.swipeUp() }
+                XCTAssertTrue(button.isHittable)
+                button.tap()
+                XCTAssertTrue(app.staticTexts["toast.action.detail"].exists)
+                XCTAssertFalse(app.buttons["cooking.timer.edit"].exists)
+                assertStep(app, entry.0)
+                let playback = app.buttons["toast.animation.play"]
+                expectation(for: NSPredicate(format: "label == %@", "Lire le geste"), evaluatedWith: playback)
+                waitForExpectations(timeout: 10)
+                screenshot(app, "Tomate — \(index + 1) — \(gesture)")
+            }
+            if index == 1 {
+                let replay = app.buttons["cooking.replay"]
+                for _ in 0..<3 where !replay.isHittable { app.swipeDown() }
+                replay.tap()
+                let playback = app.buttons["toast.animation.play"]
+                playback.tap()
+                XCTAssertEqual(playback.label, "Lire le geste")
+                playback.tap()
+                XCTAssertEqual(playback.label, "Mettre le geste en pause")
+            }
+            if index < steps.count - 1 { app.buttons["cooking.skip"].tap() }
+        }
+        // Merely consulting all gestures must leave the first step unperformed.
+        for _ in 0..<5 { app.buttons["cooking.previous"].tap() }
+        assertStep(app, "Préchauffer le four")
+        XCTAssertTrue(app.buttons["cooking.next"].label.contains("C’est fait"))
+        XCTAssertFalse(app.buttons["cooking.timer.edit"].exists)
+    }
+
     private func coloredFraction(_ image: UIImage) throws -> Double {
         let cgImage = try XCTUnwrap(image.cgImage)
         let width = cgImage.width

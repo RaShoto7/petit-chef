@@ -114,21 +114,31 @@ struct CookingView: View {
             .scrollIndicators(.hidden)
             .onChange(of: position) { _, _ in withAnimation(motion) { proxy.scrollTo("top", anchor: .top) } }
         }
-        .safeAreaInset(edge: .bottom) { navigationControls }
+        .safeAreaInset(edge: .bottom) {
+            navigationControls
+                .background {
+                    if cooking.recipe?.id == "tomato-mozzarella-toast" {
+                        Color.white.ignoresSafeArea(edges: .bottom)
+                    }
+                }
+        }
     }
 
     private func instruction(_ step: RecipeStep) -> some View {
         ChefCard {
             VStack(alignment: .leading, spacing: 20) {
-                AnimatedCookingIllustration(stepID: step.id, recipeID: cooking.recipe?.id ?? "")
-                    .frame(height: 210).frame(maxWidth: .infinity)
-                Text(step.title)
-                    .font(.system(.title2, design: .rounded, weight: .semibold))
-                    .accessibilityIdentifier("cooking.step.title")
-                Text(CookingText.formatted(step.instruction, unit: temperatureUnit))
-                    .font(.body).lineSpacing(4)
-                    .fixedSize(horizontal: false, vertical: true)
-
+                if cooking.recipe?.id == "tomato-mozzarella-toast", let guide = TomatoToastGuide.forStep(step.id) {
+                    TomatoToastInstruction(title: step.title, guide: guide, temperatureUnit: temperatureUnit)
+                } else {
+                    AnimatedCookingIllustration(stepID: step.id, recipeID: cooking.recipe?.id ?? "")
+                        .frame(height: 210).frame(maxWidth: .infinity)
+                    Text(step.title)
+                        .font(.system(.title2, design: .rounded, weight: .semibold))
+                        .accessibilityIdentifier("cooking.step.title")
+                    Text(CookingText.formatted(step.instruction, unit: temperatureUnit))
+                        .font(.body).lineSpacing(4)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
             }.padding(22)
         }
     }

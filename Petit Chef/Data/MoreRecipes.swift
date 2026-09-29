@@ -44,14 +44,14 @@ nonisolated extension RecipeCatalog {
                 Ingredient(id: "salt-pepper", name: "Sel & poivre", quantity: nil, unit: "", detail: "Assaisonnement")
             ])
         ],
-        equipment: ["Four", "Plaque", "Planche", "Couteau", "Bol"],
+        equipment: ["Four", "Plaque", "Papier cuisson", "Planche", "Couteau", "Bol", "Papier absorbant", "Cuillère", "Maniques", "Spatule"],
         steps: [
-            step("preheat-toast", "Préchauffer le four", "Préchauffer le four à 180 °C. Disposer le pain sur une plaque.", active: 2),
-            step("slice-tomatoes", "Découper les ingrédients", "Couper les tomates en dés et la mozzarella égouttée en tranches. Couper l’ail en deux.", active: 3, dependencies: ["preheat-toast"]),
-            step("build-toast", "Garnir le pain", "Frotter le pain avec l’ail. Répartir la moitié de l’huile et la mozzarella sur les tartines.", active: 2, dependencies: ["slice-tomatoes"]),
-            step("bake-toast", "Gratiner les tartines", "Enfourner à 180 °C pendant 8 minutes. Vérifier que la mozzarella a fondu et que les bords du pain sont dorés.", active: 1, passive: 8, parallel: "Assaisonne les tomates pendant ce temps.", dependencies: ["build-toast"], timer: RecipeTimer(id: "toast-bake", label: "Tartines", durationSeconds: 480)),
-            step("dress-tomatoes", "Assaisonner les tomates", "Mélanger les tomates avec le reste d’huile et la moitié du basilic. Assaisonner.", active: 2, startAfter: "bake-toast"),
-            step("serve-toast", "Servir les tartines", "Répartir les tomates sur les tartines chaudes. Ajouter le reste du basilic et servir.", active: 1, dependencies: ["bake-toast", "dress-tomatoes"])
+            step("preheat-toast", "Préchauffer le four", TomatoToastGuide.forStep("preheat-toast")!.instruction, active: 2),
+            step("slice-tomatoes", "Découper les ingrédients", TomatoToastGuide.forStep("slice-tomatoes")!.instruction, active: 5, dependencies: ["preheat-toast"]),
+            step("build-toast", "Garnir le pain", TomatoToastGuide.forStep("build-toast")!.instruction, active: 2, dependencies: ["slice-tomatoes"]),
+            step("bake-toast", "Gratiner les tartines", TomatoToastGuide.forStep("bake-toast")!.instruction, active: 1, passive: 8, parallel: "Assaisonne les tomates pendant ce temps.", dependencies: ["build-toast"], timer: RecipeTimer(id: "toast-bake", label: "Tartines", durationSeconds: 480)),
+            step("dress-tomatoes", "Assaisonner les tomates", TomatoToastGuide.forStep("dress-tomatoes")!.instruction, active: 2, startAfter: "bake-toast"),
+            step("serve-toast", "Servir les tartines", TomatoToastGuide.forStep("serve-toast")!.instruction, active: 1, dependencies: ["bake-toast", "dress-tomatoes"])
         ],
         tip: "Égoutte bien la mozzarella et garde les tomates pour la sortie du four : le pain restera croustillant."
     )
