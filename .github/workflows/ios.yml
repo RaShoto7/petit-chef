@@ -16,8 +16,6 @@ jobs:
     timeout-minutes: 25
     env:
       DEVELOPER_DIR: /Applications/Xcode_27.0.app/Contents/Developer
-      PETITCHEF_DERIVED_DATA: ${{ runner.temp }}/PetitChefDerivedData
-      PETITCHEF_TEST_RESULTS: ${{ runner.temp }}/PetitChef.xcresult
     steps:
       - uses: actions/checkout@v4
       - name: Préparer Metal
@@ -27,6 +25,9 @@ jobs:
             xcodebuild -downloadComponent MetalToolchain
           fi
       - name: Compiler et tester
+        env:
+          PETITCHEF_DERIVED_DATA: ${{ runner.temp }}/PetitChefDerivedData
+          PETITCHEF_TEST_RESULTS: ${{ runner.temp }}/PetitChef.xcresult
         run: ./scripts/simulator.sh test
       - name: Conserver les résultats
         if: always()
