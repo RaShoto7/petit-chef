@@ -51,6 +51,46 @@ final class Petit_ChefUITests: XCTestCase {
     }
 
     @MainActor
+    func testShoppingCompletionPersistsWhenLeavingAfterChecking() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing", "-reset-cooking"]
+        app.launch()
+        app.tabBars.buttons["Listes"].tap()
+        app.buttons["shopping.create"].tap()
+        let create = app.alerts["Nouvelle liste"]
+        XCTAssertTrue(create.waitForExistence(timeout: 4))
+        create.textFields.firstMatch.tap()
+        create.textFields.firstMatch.typeText("Marché")
+        create.buttons["Créer"].tap()
+        app.buttons["shopping.item.add"].tap()
+        let add = app.alerts["Ajouter un article"]
+        add.textFields.element(boundBy: 0).tap()
+        add.textFields.element(boundBy: 0).typeText("Citrons")
+        add.textFields.element(boundBy: 1).tap()
+        add.textFields.element(boundBy: 1).typeText("2")
+        add.buttons["Ajouter"].tap()
+        let item = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@ AND identifier != %@", "shopping.item.", "shopping.item.add")).firstMatch
+        XCTAssertTrue(item.waitForExistence(timeout: 4))
+        let identifier = item.identifier
+        item.tap()
+        // Leave while the check is settling: purchase data must already be saved.
+        app.navigationBars.buttons.element(boundBy: 0).tap()
+        let list = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "shopping.list.")).firstMatch
+        XCTAssertTrue(list.waitForExistence(timeout: 5))
+        XCTAssertTrue(list.label.contains("Prête."))
+        screenshot(app, "Motion — Complete card")
+        app.terminate()
+        app.launchArguments = ["-ui-testing"]
+        app.launch()
+        app.tabBars.buttons["Listes"].tap()
+        list.tap()
+        XCTAssertEqual(app.buttons[identifier].value as? String, "Dans le panier")
+        screenshot(app, "Motion — Complete list")
+        app.buttons[identifier].tap()
+        XCTAssertEqual(app.buttons[identifier].value as? String, "À acheter")
+    }
+
+    @MainActor
     func testCustomRecipeAndFlexibleCookingSurviveRelaunch() throws {
         let app = XCUIApplication()
         app.launchArguments = ["-ui-testing", "-reset-cooking"]

@@ -62,7 +62,7 @@ Les préférences d’ingrédients ne modifient pas une session déjà commencé
 
 ## Vérification
 
-24 tests unitaires et 4 parcours UI (personnalisation/navigation/reprise, ajout/suppression, contrôle des illustrations rendues et listes de courses) passent sur iPhone 18 Pro Simulator, iOS 27. Les tests UI ordinaires utilisent un stockage séparé et des notifications locales désactivées. Le test `testSystemTimerAuthorizationAndBackground` exerce séparément AlarmKit réel, avec son autorisation système, puis annule le minuteur. Ce contrôle a été ignoré explicitement sur ce simulateur : AlarmKit refuse l’autorisation, y compris après compilation signée localement. L’affichage réel de la Dynamic Island n’est donc pas encore validé.
+24 tests unitaires et 5 parcours UI (personnalisation/navigation/reprise, ajout/suppression, contrôle des illustrations rendues listes de courses et reprise d’une liste terminée) passent sur iPhone 18 Pro Simulator, iOS 27. Les tests UI ordinaires utilisent un stockage séparé et des notifications locales désactivées. Le test `testSystemTimerAuthorizationAndBackground` exerce séparément AlarmKit réel, avec son autorisation système, puis annule le minuteur. Ce contrôle a été ignoré explicitement sur ce simulateur : AlarmKit refuse l’autorisation, y compris après compilation signée localement. L’affichage réel de la Dynamic Island n’est donc pas encore validé.
 
 ```sh
 xcodebuild -project 'Petit Chef.xcodeproj' -scheme 'Petit Chef' \
