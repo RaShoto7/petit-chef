@@ -61,6 +61,13 @@ struct ChefCard<Content: View>: View {
             }
             .glassEffect(reduceTransparency ? .identity : .clear.tint(tint.opacity(0.12)),
                          in: .rect(cornerRadius: DesignSystem.Layout.cardRadius))
+            // Glass highlights are intentionally discontinuous. A separate closed
+            // hairline keeps the card legible even against an entirely white page.
+            .overlay {
+                RoundedRectangle(cornerRadius: DesignSystem.Layout.cardRadius, style: .continuous)
+                    .strokeBorder(DesignSystem.Colors.ink.opacity(reduceTransparency ? 0.15 : 0.11), lineWidth: 0.75)
+                    .allowsHitTesting(false)
+            }
     }
 }
 

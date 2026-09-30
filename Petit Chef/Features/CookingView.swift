@@ -19,6 +19,7 @@ struct CookingView: View {
     @AppStorage("hapticsEnabled") private var hapticsEnabled = true
     @State private var advances = 0
     @State private var arrivalID: UUID?
+    @State private var hasEntered = false
 
     private var steps: [RecipeStep] { cooking.recipe?.steps ?? [] }
     private var position: Int { min(index ?? cooking.currentIndex, max(0, steps.count - 1)) }
@@ -79,7 +80,19 @@ struct CookingView: View {
                 isAdvancing = false
             }
         }
-        .onAppear { index = cooking.currentIndex; UIApplication.shared.isIdleTimerDisabled = true }
+        .onAppear {
+            index = cooking.currentIndex
+            UIApplication.shared.isIdleTimerDisabled = true
+            guard !hasEntered else { return }
+            hasEntered = true
+            if !reduceMotion {
+                // The system crossfade opens the room, then the first card settles.
+                isAdvancing = true
+                cardOpacity = 0
+                cardOffset = 46
+                arrivalID = UUID()
+            }
+        }
         .onDisappear { UIApplication.shared.isIdleTimerDisabled = false }
         .onChange(of: scenePhase) { _, phase in UIApplication.shared.isIdleTimerDisabled = phase == .active }
     }
@@ -99,7 +112,6 @@ struct CookingView: View {
                     .id(step.id)
                     .opacity(cardOpacity)
                     .offset(y: cardOffset)
-                    if !cooking.activeTimers.isEmpty { timers }
                     if let error = cooking.notificationError {
                         Text(error).font(.caption).foregroundStyle(.secondary)
                     }
@@ -120,7 +132,19 @@ struct CookingView: View {
                 withTransaction(transaction) { proxy.scrollTo("top", anchor: .top) }
             }
         }
-        .safeAreaInset(edge: .bottom) { navigationControls }
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            VStack(spacing: 4) {
+                if !cooking.activeTimers.isEmpty {
+                    timers
+                        .padding(.horizontal, DesignSystem.Layout.pagePadding)
+                        .padding(.top, 14)
+                        .transition(.opacity.combined(with: .move(edge: .bottom)))
+                }
+                navigationControls
+            }
+            .frame(maxWidth: DesignSystem.Layout.maximumContentWidth)
+            .frame(maxWidth: .infinity)
+        }
     }
 
     private func instruction(_ step: RecipeStep) -> some View {
@@ -245,46 +269,47 @@ struct CookingView: View {
         TimelineView(.periodic(from: .now, by: 1)) { context in
             VStack(spacing: 12) {
                 ForEach(cooking.activeTimers) { timer in
-                    HStack(spacing: 12) {
-                        Image(systemName: cooking.notificationAuthorization != .authorized || !cooking.notificationsEnabled ? "bell.slash" : "timer")
-                            .foregroundStyle(DesignSystem.Colors.accent)
-                            .accessibilityLabel(cooking.notificationAuthorization != .authorized || !cooking.notificationsEnabled ? "Alertes désactivées" : "Minuteur système")
-                            .accessibilityIdentifier(cooking.notificationAuthorization != .authorized || !cooking.notificationsEnabled ? "cooking.timer.muted" : "cooking.timer.system")
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(timer.label).font(.subheadline.weight(.medium))
-                            if timer.isExpired(at: context.date) { Text("À vérifier").font(.caption).foregroundStyle(.secondary) }
+                    ChefCard {
+                        HStack(spacing: 10) {
+                            Image(systemName: cooking.notificationAuthorization != .authorized || !cooking.notificationsEnabled ? "bell.slash" : "timer")
+                                .foregroundStyle(DesignSystem.Colors.accent)
+                                .accessibilityLabel(cooking.notificationAuthorization != .authorized || !cooking.notificationsEnabled ? "Alertes désactivées" : "Minuteur système")
+                                .accessibilityIdentifier(cooking.notificationAuthorization != .authorized || !cooking.notificationsEnabled ? "cooking.timer.muted" : "cooking.timer.system")
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(timer.label).font(.subheadline.weight(.medium)).lineLimit(2)
+                                if timer.isExpired(at: context.date) { Text("À vérifier").font(.caption).foregroundStyle(.secondary) }
+                            }
+                            Spacer(minLength: 4)
+                            Button { editingTimer = timer } label: {
+                                Text(clock(timer.remainingSeconds(at: context.date)))
+                                    .font(.system(size: 27, weight: .light, design: .rounded).monospacedDigit())
+                                    .contentTransition(.numericText(countsDown: true))
+                                    .accessibilityIdentifier("cooking.timer.value")
+                                    .padding(.vertical, 10)
+                            }
+                            .buttonStyle(TactileButtonStyle())
+                            .accessibilityLabel("Régler le minuteur")
+                            .accessibilityValue(clock(timer.remainingSeconds(at: context.date)))
+                            .accessibilityIdentifier("cooking.timer.edit")
+                            Menu {
+                                Button("Régler la durée…", systemImage: "dial.low") { editingTimer = timer }
+                                Button("Ajouter 1 minute", systemImage: "plus") { cooking.extendTimer(id: timer.id) }
+                                Button("Retirer 1 minute", systemImage: "minus") { cooking.adjustTimer(id: timer.id, by: -60) }
+                            } label: { Image(systemName: "ellipsis").frame(width: 32, height: 44) }
+                            .accessibilityLabel("Modifier le minuteur")
+                            .accessibilityIdentifier("cooking.timer.options")
+                            Button { stopTimer(timer) } label: {
+                                Image(systemName: "xmark")
+                                    .font(.system(size: 13, weight: .medium))
+                                    .frame(width: 44, height: 44)
+                                    .contentShape(.circle)
+                            }
+                            .buttonStyle(TactileButtonStyle())
+                            .accessibilityLabel("Arrêter le minuteur \(timer.label)")
+                            .accessibilityIdentifier("cooking.timer.stop")
                         }
-                        Spacer(minLength: 4)
-                        Button { editingTimer = timer } label: {
-                            Text(clock(timer.remainingSeconds(at: context.date)))
-                                .font(.title3.monospacedDigit())
-                                .contentTransition(.numericText(countsDown: true))
-                                .accessibilityIdentifier("cooking.timer.value")
-                                .padding(.vertical, 10)
-                        }
-                        .buttonStyle(TactileButtonStyle())
-                        .accessibilityLabel("Régler le minuteur")
-                        .accessibilityValue(clock(timer.remainingSeconds(at: context.date)))
-                        .accessibilityIdentifier("cooking.timer.edit")
-                        Menu {
-                            Button("Régler la durée…", systemImage: "dial.low") { editingTimer = timer }
-                            Button("Ajouter 1 minute", systemImage: "plus") { cooking.extendTimer(id: timer.id) }
-                            Button("Retirer 1 minute", systemImage: "minus") { cooking.adjustTimer(id: timer.id, by: -60) }
-                        } label: { Image(systemName: "ellipsis").frame(width: 32, height: 44) }
-                        .accessibilityLabel("Modifier le minuteur")
-                        .accessibilityIdentifier("cooking.timer.options")
-                        Button { stopTimer(timer) } label: {
-                            Image(systemName: "xmark")
-                                .font(.system(size: 13, weight: .medium))
-                                .frame(width: 44, height: 44)
-                                .contentShape(.circle)
-                        }
-                        .buttonStyle(TactileButtonStyle())
-                        .accessibilityLabel("Arrêter le minuteur \(timer.label)")
-                        .accessibilityIdentifier("cooking.timer.stop")
+                        .padding(.leading, 18).padding(.trailing, 6).padding(.vertical, 6)
                     }
-                    .padding(.horizontal, 16).padding(.vertical, 8)
-                    .background(DesignSystem.Colors.sage.opacity(0.20), in: RoundedRectangle(cornerRadius: 22))
                 }
             }
         }

@@ -183,24 +183,33 @@ final class Petit_ChefUITests: XCTestCase {
         XCTAssertFalse(app.buttons["cooking.previous"].exists)
         XCTAssertFalse(app.buttons["cooking.overview"].exists)
         XCTAssertFalse(app.buttons["cooking.replay"].exists)
+        Thread.sleep(forTimeInterval: 3) // Capture the gesture after arrival.
         screenshot(app, "T03 — Four croquis")
         next(app, "Découper les ingrédients")
+        Thread.sleep(forTimeInterval: 5) // Capture the gesture after arrival.
         screenshot(app, "T04 — Découpe croquis")
         app.buttons["cooking.previous"].tap()
         assertStep(app, "Préchauffer le four")
         XCTAssertFalse(app.buttons["cooking.previous"].exists)
         next(app, "Découper les ingrédients")
         next(app, "Garnir le pain")
+        Thread.sleep(forTimeInterval: 8) // Capture the gesture after arrival.
         screenshot(app, "T05 — Garniture croquis")
         next(app, "Gratiner les tartines")
+        Thread.sleep(forTimeInterval: 7) // Capture the gesture after arrival.
         screenshot(app, "T06 — Gratin croquis")
         next(app, "Assaisonner les tomates")
+        Thread.sleep(forTimeInterval: 4) // Capture the gesture after arrival.
         screenshot(app, "T07 — Mélange croquis")
-        XCTAssertTrue(app.buttons["cooking.timer.edit"].exists)
+        let timer = app.buttons["cooking.timer.edit"]
+        XCTAssertTrue(timer.isHittable)
+        XCTAssertGreaterThan(timer.frame.midY, app.staticTexts["cooking.step.title"].frame.maxY)
+        XCTAssertLessThan(timer.frame.maxY, app.buttons["cooking.next"].frame.minY)
         app.buttons["cooking.timer.stop"].firstMatch.tap()
         XCTAssertEqual(app.sheets.count, 0)
         XCTAssertFalse(app.buttons["cooking.timer.stop"].exists)
         next(app, "Servir les tartines")
+        Thread.sleep(forTimeInterval: 7) // Capture the gesture after arrival.
         screenshot(app, "T08 — Dressage croquis")
         XCTAssertFalse(app.buttons["cooking.skip"].exists)
         app.buttons["cooking.next"].tap()

@@ -68,7 +68,13 @@ private struct ToastDrawing {
 
     mutating func render(step: String, elapsed: Double) {
         // Each sequence has a readable final pose and a gentle dissolve at the loop seam.
-        let duration = step == "build-toast" ? 16.0 : 13.0
+        let duration: Double
+        switch step {
+        case "slice-tomatoes": duration = 18
+        case "build-toast": duration = 18
+        case "dress-tomatoes", "serve-toast": duration = 16
+        default: duration = 14
+        }
         let time = elapsed.truncatingRemainder(dividingBy: duration)
         context.opacity = progress(time, 0, 0.6) * (1 - progress(time, duration - 0.7, duration))
         switch step {
@@ -129,6 +135,15 @@ private struct ToastDrawing {
             marks.addLine(to: CGPoint(x: x + box.height * 0.7, y: box.minY))
         }
         pencil.stroke(marks, with: .color(color), lineWidth: 0.55)
+    }
+
+    /// Contact shadow stays on the surface as the ingredient travels above it.
+    private func contactShadow(x: Double, y: Double, width: Double, height: Double, elevation: Double = 0) {
+        var shadow = context
+        shadow.addFilter(.blur(radius: 1.2 + elevation * 0.035))
+        shadow.fill(Path(ellipseIn: CGRect(x: x - width / 2, y: y - height / 2,
+                                          width: width, height: height)),
+                    with: .color(ToastInk.line.opacity(0.12 / (1 + elevation * 0.025))))
     }
 
     private func ground() {
@@ -208,7 +223,8 @@ private struct ToastDrawing {
     private func dice(_ seed: Int) {
         let skew = Double(seed % 3) * 0.7
         let shape = path([CGPoint(x: -6, y: -5), CGPoint(x: 3, y: -7), CGPoint(x: 7, y: -2), CGPoint(x: 5, y: 5 + skew), CGPoint(x: -5, y: 5)], closed: true)
-        outline(shape, fill: ToastInk.tomato.opacity(0.72), width: 0.7)
+        outline(shape.offsetBy(dx: 0, dy: 3), fill: ToastInk.tomato.opacity(0.9), width: 0.5)
+        outline(shape, fill: ToastInk.redWash, width: 0.7)
         line([CGPoint(x: -4, y: -3), CGPoint(x: 2, y: -4), CGPoint(x: 4, y: -1)], color: ToastInk.pale.opacity(0.9), width: 1.2)
         line([CGPoint(x: -4, y: 4), CGPoint(x: 3, y: 4)], color: ToastInk.tomato, width: 0.8)
     }
@@ -257,48 +273,73 @@ private struct ToastDrawing {
         ground(); board()
         at(109, 117, scale: 0.93).tomatoSlice()
         at(84, 99, scale: 0.65, angle: -28).leaf()
-        at(282, 197, scale: 0.8, angle: 10).mozzarella()
         at(285, 222, scale: 0.67, angle: -20).garlic()
-        // Four complete rocking cuts: lift, forward travel, contact, then release.
-        let cutTime = max(0, min(7.6, time - 0.8))
-        let cut = min(3, Int(cutTime / 1.9))
-        let phase = cutTime - Double(cut) * 1.9
-        let down = progress(phase, 0.55, 1.15)
-        let lift = progress(phase, 1.35, 1.85)
-        let contact = down * (1 - lift)
-        let advance = Double(cut) * 8 + progress(phase, 1.45, 1.9) * 8
-        at(173, 171, angle: 15).tomatoSlice()
-        for i in 0..<16 {
-            let appeared = progress(time, 1.95 + Double(i / 4) * 1.9, 2.35 + Double(i / 4) * 1.9)
-            let x = 117 + Double(i % 4) * 13 - appeared * 11
-            let y = 191 + Double(i / 4) * 10
-            at(x, y, angle: Double(i * 37), opacity: appeared).dice(i)
+        // The original tomato is cut into contiguous pieces, retaining its seeds
+        // and skin. Separation begins only after the blade reaches the board.
+        let base = at(173, 174, scale: 1.3, angle: 15)
+        for column in 0..<4 {
+            let separate = progress(time, 1.9 + Double(column) * 1.8, 2.3 + Double(column) * 1.8)
+            let crossCut = progress(time, 9.7, 11.6)
+            for row in 0..<3 {
+                var piece = base.context
+                piece.translateBy(x: Double(column - 2) * separate * 3,
+                                  y: Double(row - 1) * crossCut * 5)
+                piece.clip(to: Path(CGRect(x: -30 + Double(column) * 15,
+                                          y: -19 + Double(row) * 13, width: 15, height: 13)))
+                ToastDrawing(context: piece).tomatoSlice()
+            }
         }
-        let rest = progress(time, 8.5, 9.4)
-        at(194 + advance + rest * 23, 115 + contact * 47 + rest * 15,
-           angle: -27 + contact * 9 + rest * 20).knife()
+        let cutTime = max(0, min(7.19, time - 0.8))
+        let cut = min(3, Int(cutTime / 1.8))
+        let phase = cutTime - Double(cut) * 1.8
+        let contact = progress(phase, 0.35, 1.1) * (1 - progress(phase, 1.3, 1.75))
+        let cross = progress(time, 8.3, 9.1)
+        let crossPhase = (max(0, time - 9.1)).truncatingRemainder(dividingBy: 1.8)
+        let crossContact = progress(crossPhase, 0.35, 1.1) * (1 - progress(crossPhase, 1.3, 1.75))
+        let pressing = time >= 12.4 ? 1 : (time < 8.3 ? contact : crossContact)
+        let rest = progress(time, 12.4, 13.5)
+        let pivotX = 142 + Double(cut) * 18 - cross * 35 + rest * 67
+        let pivotY = 162 + Double(cut) * 4 + cross * 22 + rest * 20
+        contactShadow(x: pivotX + 59, y: pivotY + 8, width: 115, height: 9,
+                      elevation: (1 - pressing) * 30)
+        // Rock around the blade tip: it remains in contact rather than the whole
+        // knife floating vertically through the tomato.
+        var blade = at(pivotX, pivotY - (1 - pressing) * 12,
+                       angle: 15 - (1 - pressing) * 25 - cross * 58 - rest * 17)
+        blade.context.translateBy(x: 62, y: -7)
+        blade.knife()
     }
 
     private mutating func assembling(_ time: Double) {
         ground(); board()
         for (i, point) in [CGPoint(x: 126, y: 166), CGPoint(x: 251, y: 194)].enumerated() {
             at(point.x, point.y, scale: 0.95, angle: 12).bread()
-            let rub = min(1, max(0, (time - 0.5) / 3.2))
-            if time < 4.5 {
-                let fade = (1 - progress(time, 3.4, 4.3)) * progress(time, 0, 0.5)
-                at(point.x + sin(rub * .pi * 5) * 29, point.y - 15,
-                   scale: 0.85, angle: sin(rub * .pi * 5) * 12, opacity: fade).garlic()
+            let rubStart = 0.5 + Double(i) * 1.65
+            let rub = progress(time, rubStart, rubStart + 1.5)
+            if time >= rubStart && time < rubStart + 1.6 {
+                let fade = progress(time, rubStart, rubStart + 0.15)
+                    * (1 - progress(time, rubStart + 1.4, rubStart + 1.6))
+                let rubX = sin(rub * .pi * 4) * 29
+                contactShadow(x: point.x + rubX, y: point.y - 6, width: 20, height: 8)
+                at(point.x + rubX, point.y - 15,
+                   scale: 0.85, angle: sin(rub * .pi * 4) * 12, opacity: fade).garlic()
             }
-            let oil = progress(time, 4, 6)
+            let oil = progress(time, 4 + Double(i), 4.8 + Double(i))
             var trail = Path()
             trail.move(to: CGPoint(x: point.x - 33, y: point.y - 16))
             trail.addCurve(to: CGPoint(x: point.x + 29, y: point.y - 3), control1: CGPoint(x: point.x - 8, y: point.y - 36), control2: CGPoint(x: point.x + 3, y: point.y + 10))
             stroke(trail.trimmedPath(from: 0, to: oil), color: ToastInk.oil.opacity(0.64), width: 2)
             for j in 0..<3 {
                 let settle = progress(time, 6.3 + Double(i) * 1.2 + Double(j) * 0.7, 7.4 + Double(i) * 1.2 + Double(j) * 0.7)
-                at(point.x + Double(j - 1) * 25 + (1 - settle) * 18,
-                   point.y - 12 - (1 - settle) * 80, scale: 0.85,
-                   angle: 9 + (1 - settle) * 24, opacity: settle).mozzarella()
+                let onset = 6.3 + Double(i) * 1.2 + Double(j) * 0.7
+                if time >= onset {
+                    let x = point.x + Double(j - 1) * 25
+                    let elevation = (1 - settle) * 80
+                    contactShadow(x: x, y: point.y - 6, width: 35, height: 11, elevation: elevation)
+                    at(x + (1 - settle) * 24, point.y - 12 - elevation,
+                       scale: 0.85, angle: 9 + (1 - settle) * 24,
+                       opacity: progress(time, onset, onset + 0.18)).mozzarella()
+                }
             }
         }
         if time >= 3.8 && time < 6.8 {
@@ -306,11 +347,21 @@ private struct ToastDrawing {
             let tilt = -115 * pour
             var bottle = at(302, 65, angle: tilt, opacity: pour)
             bottle.oilBottle()
-            let targetX = 120 + progress(time, 4.4, 5.8) * 130
+            let second = time >= 5
+            let oilStart = second ? 5.0 : 4.0
+            let amount = progress(time, oilStart, oilStart + 0.8)
+            let point = second ? CGPoint(x: 251, y: 194) : CGPoint(x: 126, y: 166)
+            // Sample the same cubic used for the oil on the bread; the falling
+            // stream terminates exactly at the growing stroke, never in the gap.
+            let t = amount, u = 1 - t
+            let targetX = point.x + u*u*u * -33 + 3*u*u*t * -8 + 3*u*t*t * 3 + t*t*t * 29
+            let targetY = point.y + u*u*u * -16 + 3*u*u*t * -36 + 3*u*t*t * 10 + t*t*t * -3
+            let flowing = progress(time, oilStart, oilStart + 0.12)
+                * (1 - progress(time, oilStart + 0.75, oilStart + 0.9))
             var stream = Path()
             stream.move(to: CGPoint(x: 302 + sin(tilt * .pi / 180) * 45, y: 65 - cos(tilt * .pi / 180) * 45))
-            stream.addQuadCurve(to: CGPoint(x: targetX, y: 162 + (targetX - 120) * 0.2), control: CGPoint(x: 248, y: 93))
-            stroke(stream, color: ToastInk.oil.opacity(pour * 0.55), width: 1.2)
+            stream.addQuadCurve(to: CGPoint(x: targetX, y: targetY), control: CGPoint(x: targetX, y: 100))
+            stroke(stream, color: ToastInk.oil.opacity(flowing * 0.55), width: 1.2)
         }
     }
 
@@ -338,6 +389,9 @@ private struct ToastDrawing {
         ellipse(CGRect(x: 198, y: 111, width: 3.5, height: 3.5), fill: ToastInk.crust.opacity(progress(time, 1.5, 2.5)), contour: false)
         let window = path([CGPoint(x: 79, y: 123), CGPoint(x: 242, y: 151), CGPoint(x: 242, y: 213), CGPoint(x: 79, y: 187)], closed: true)
         outline(window, fill: ToastInk.pale.opacity(0.9), width: 1)
+        var warmth = context
+        warmth.clip(to: window)
+        warmth.fill(window, with: .color(ToastInk.bread.opacity(progress(time, 5.2, 7) * 0.14)))
         for i in 0..<7 {
             line([CGPoint(x: 85 + Double(i) * 21, y: 184 + Double(i) * 3.4), CGPoint(x: 103 + Double(i) * 21, y: 174 + Double(i) * 3.4)], color: ToastInk.line.opacity(0.4), width: 0.6)
         }
@@ -357,11 +411,19 @@ private struct ToastDrawing {
         }
         // The upper edge rotates around the lower hinge after the tray settles.
         let close = baking ? progress(time, 3.8, 5.2) : 1
-        let leftTop = CGPoint(x: 79 - (1 - close) * 34, y: 123 + (1 - close) * 95)
-        let rightTop = CGPoint(x: 242 - (1 - close) * 34, y: 151 + (1 - close) * 95)
+        let hingeAngle = (1 - close) * .pi / 2
+        let depth = sin(hingeAngle) * 57
+        let leftTop = CGPoint(x: 79 - depth * 0.55, y: 187 - cos(hingeAngle) * 64 + depth * 0.65)
+        let rightTop = CGPoint(x: 242 - depth * 0.55, y: 213 - cos(hingeAngle) * 62 + depth * 0.65)
         let door = path([leftTop, rightTop, CGPoint(x: 242, y: 213), CGPoint(x: 79, y: 187)], closed: true)
         outline(door, fill: ToastInk.pale.opacity(0.15 + (1 - close) * 0.7), width: 0.8)
         line([CGPoint(x: leftTop.x + 12, y: leftTop.y + 3), CGPoint(x: rightTop.x - 12, y: rightTop.y - 1)], width: 2)
+        let innerGlass = path([
+            CGPoint(x: leftTop.x + 13, y: leftTop.y + 12 * cos(hingeAngle)),
+            CGPoint(x: rightTop.x - 13, y: rightTop.y + 12 * cos(hingeAngle)),
+            CGPoint(x: 229, y: 203), CGPoint(x: 92, y: 181)
+        ], closed: true)
+        stroke(innerGlass, color: ToastInk.line.opacity(0.35), width: 0.6)
         if close > 0.8 {
             var reflection = context
             reflection.opacity = progress(close, 0.8, 1)
@@ -389,10 +451,12 @@ private struct ToastDrawing {
         }
         outline(bowl, fill: ToastInk.pale.opacity(0.62), width: 1.3, hatch: true)
         ellipse(CGRect(x: 85, y: 108, width: 200, height: 91), fill: .white)
-        let spin = min(7.5, max(0, time - 0.8)) * 0.82
+        let spin = progress(time, 0.8, 9.0) * .pi * 2
+        let activity = progress(time, 0.8, 1.8) * (1 - progress(time, 8, 9))
         for i in 0..<24 {
-            let angle = Double(i) * 2.399 + spin
-            let radius = 20.0 + Double(i % 5) * 11
+            let angle = Double(i) * 2.399 + spin * (0.25 + Double(i % 3) * 0.08)
+            let proximity = max(0, cos(angle - spin))
+            let radius = 20.0 + Double(i % 5) * 11 + proximity * activity * 6
             at(183 + cos(angle) * radius, 151 + sin(angle) * radius * 0.40,
                scale: 0.9, angle: angle * 32).dice(i)
         }
@@ -402,7 +466,7 @@ private struct ToastDrawing {
         }
         let spoonX = 182 + cos(spin) * 46
         let spoonY = 147 + sin(spin) * 23
-        let rest = progress(time, 8.3, 9.4)
+        let rest = progress(time, 9.0, 10.3)
         let spoon = at(spoonX + rest * 25, spoonY - rest * 13, angle: -36 - sin(spin) * 9)
         spoon.outline(Path(roundedRect: CGRect(x: -5, y: -115, width: 10, height: 113), cornerRadius: 5), fill: ToastInk.bread.opacity(0.50), width: 0.9)
         spoon.ellipse(CGRect(x: -17, y: -22, width: 34, height: 45), fill: ToastInk.bread.opacity(0.55))
@@ -424,14 +488,27 @@ private struct ToastDrawing {
                 let land = progress(time, 0.6 + Double(i) * 0.14 + Double(side) * 1.6, 1.4 + Double(i) * 0.14 + Double(side) * 1.6)
                 let x = point.x + Double(i % 4 - 2) * 20 + 9 + sin(Double(i) * 2.4) * 4
                 let y = point.y + Double(i / 4 - 1) * 11 - 10
-                at(x + (1 - land) * 19, y - (1 - land) * 64,
-                   angle: Double(i * 31) + (1 - land) * 60, opacity: land).dice(i)
+                let onset = 0.6 + Double(i) * 0.14 + Double(side) * 1.6
+                if time >= onset {
+                    let elevation = (1 - land) * 64
+                    let settle = sin(land * .pi) * 5
+                    contactShadow(x: x, y: y + 6, width: 13, height: 6, elevation: elevation)
+                    at(x + (1 - land) * 19, y - elevation - settle,
+                       angle: Double(i * 31) + (1 - land) * 60,
+                       opacity: progress(time, onset, onset + 0.12)).dice(i)
+                }
             }
             for i in 0..<2 {
                 let land = progress(time, 4.8 + Double(side) * 0.7 + Double(i) * 0.5, 6.0 + Double(side) * 0.7 + Double(i) * 0.5)
-                at(point.x + Double(i) * 37 - 22 + sin((1 - land) * .pi) * 20,
-                   point.y - 21 - (1 - land) * 67, scale: 0.76,
-                   angle: -20 + Double(i) * 70 + (1 - land) * 90, opacity: land).leaf()
+                let onset = 4.8 + Double(side) * 0.7 + Double(i) * 0.5
+                if time >= onset {
+                    let x = point.x + Double(i) * 37 - 22
+                    contactShadow(x: x, y: point.y - 13, width: 27, height: 10, elevation: (1 - land) * 67)
+                    at(x + sin((1 - land) * .pi) * 20,
+                       point.y - 21 - (1 - land) * 67, scale: 0.76,
+                       angle: -20 + Double(i) * 70 + (1 - land) * 90,
+                       opacity: progress(time, onset, onset + 0.16)).leaf()
+                }
             }
         }
     }

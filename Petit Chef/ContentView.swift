@@ -26,6 +26,7 @@ struct ContentView: View {
                     finishedCooking = true
                     showCooking = false
                 }
+                .navigationTransition(.crossFade)
             }
             .onChange(of: cooking.presentationRequested, initial: true) { _, requested in
                 if requested && cooking.hasActiveSession {

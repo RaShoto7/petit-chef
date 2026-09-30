@@ -18,7 +18,7 @@ Prérequis : **Xcode 27**, **iOS 27 Simulator** et **Metal Toolchain**. Le scrip
 
 ## Direction visuelle : tartines
 
-Accueil en italique sans empattements, titres de recette en serif, cartes Liquid Glass transparentes et sections au dépliage stable. Les six préparations des tartines utilisent des croquis vectoriels animés. Chaque transition sépare le départ, une courte respiration et l’arrivée ; le geste commence ensuite. Les commandes inutiles disparaissent au début et à la fin ; **Terminer** revient directement à l’accueil. [Choix de rendu et limites](docs/design/tartines-premium.md).
+Accueil en serif italique New York, titres de recette en serif, cartes Liquid Glass transparentes aux contours fermés, minuteur ancré en bas et sections au dépliage stable. Les six préparations des tartines utilisent des croquis vectoriels animés. Chaque transition sépare le départ, une courte respiration et l’arrivée ; le geste commence ensuite. Les commandes inutiles disparaissent au début et à la fin ; **Terminer** revient directement à l’accueil. [Choix de rendu et limites](docs/design/tartines-premium.md).
 
 ## Version 0.4
 
