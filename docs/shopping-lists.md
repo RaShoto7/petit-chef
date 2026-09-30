@@ -12,4 +12,8 @@ Le partage est du texte avec les quantités, les recettes d’origine et l’ét
 
 - Tests de domaine : portions ajustées, sélection, instantané indépendant de la recette, sauvegarde, cases cochées, renommage, suppression, export texte, lots séparés.
 - Test UI : onglets, état vide, export avec exclusion, case cochée, fermeture et relance, restauration, ouverture du partage.
-- Les nouvelles vues n’ajoutent pas d’animations imposées ; les cartes reprennent le style tactile existant qui respecte Réduire les animations.
+- L’anneau de progression et le déplacement des achats cochés s’animent doucement ; ces animations et le style tactile des cartes respectent Réduire les animations. Le cochage respecte le réglage des retours tactiles.
+
+## Direction visuelle
+
+Fond blanc cassé, cartes blanches à bord fin et léger décalage de papier, typographie système sans arrondi, grands chiffres légers et anneau de progression. Dans le détail, les quantités ont leur propre surface et la recette d’origine n’est affichée qu’une fois lorsqu’elle est commune à tous les articles. Le bouton d’ajout reste accessible en bas de l’écran.
