@@ -117,7 +117,8 @@ final class Petit_ChefUITests: XCTestCase {
         XCTAssertTrue(burger.waitForExistence(timeout: 5))
         XCTAssertTrue(burger.label.contains("4 pers."))
         XCTAssertTrue(app.staticTexts["shopping.aisle.produce"].exists)
-        burger.tap()
+        burger.press(forDuration: 1.2)
+        app.buttons["shopping.source.details"].tap()
         XCTAssertTrue(app.staticTexts["Pour 4 personnes"].waitForExistence(timeout: 5))
         screenshot(app, "Features — Recipe snapshot")
         app.buttons["Fermer"].tap()
@@ -169,6 +170,100 @@ final class Petit_ChefUITests: XCTestCase {
         XCTAssertEqual(lists.count, 2)
         app.buttons["shopping.templates"].tap()
         XCTAssertTrue(app.buttons.matching(templatePredicate).firstMatch.waitForExistence(timeout: 5))
+    }
+
+    @MainActor
+    func testShoppingEditingUndoFiltersAndAisleOrder() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing", "-reset-cooking"]
+        app.launch()
+        app.tabBars.buttons["Listes"].tap()
+        app.buttons["shopping.create"].tap()
+        let create = app.alerts["Nouvelle liste"]
+        XCTAssertTrue(create.waitForExistence(timeout: 4))
+        create.textFields.firstMatch.tap()
+        create.textFields.firstMatch.typeText("Semaine")
+        create.buttons["Créer"].tap()
+        for recipeID in ["burger-and-oven-fries", "tomato-mozzarella-toast"] {
+            app.buttons["shopping.options"].tap()
+            app.buttons["shopping.recipe.add"].tap()
+            app.buttons["shopping.recipe.\(recipeID)"].tap()
+            XCTAssertTrue(app.buttons["shopping.export.add"].waitForExistence(timeout: 5))
+            app.buttons["shopping.export.add"].tap()
+            XCTAssertTrue(app.staticTexts["shopping.detail.title"].waitForExistence(timeout: 5))
+        }
+        let toast = app.buttons["shopping.source.tomato-mozzarella-toast"]
+        for _ in 0..<3 where !toast.isHittable { app.scrollViews["shopping.sources"].swipeLeft() }
+        toast.tap()
+        XCTAssertEqual(toast.value as? String, "Filtre actif")
+        XCTAssertTrue(app.staticTexts["shopping.filter.notice"].exists)
+        let buns = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@ AND label BEGINSWITH %@", "shopping.item.", "Pains à burger"))
+        XCTAssertFalse(buns.firstMatch.exists)
+        let tomatoPredicate = NSPredicate(format: "identifier BEGINSWITH %@ AND label BEGINSWITH %@", "shopping.item.", "Tomate")
+        let tomato = app.buttons.matching(tomatoPredicate).firstMatch
+        XCTAssertTrue(tomato.label.contains("3"))
+        screenshot(app, "Controls — Recipe filter")
+        toast.tap()
+        XCTAssertFalse(app.staticTexts["shopping.filter.notice"].exists)
+
+        tomato.press(forDuration: 1.2)
+        app.buttons["shopping.item.edit"].tap()
+        let name = app.textFields["shopping.edit.name"]
+        XCTAssertTrue(name.waitForExistence(timeout: 5))
+        name.tap()
+        name.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: (name.value as? String ?? "").count))
+        name.typeText("Tomates cerises")
+        let amount = app.textFields["shopping.edit.amount"]
+        amount.tap()
+        amount.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: (amount.value as? String ?? "").count))
+        amount.typeText("500 g")
+        app.buttons["shopping.edit.save"].tap()
+        screenshot(app, "Controls — Edited article and undo")
+        XCTAssertTrue(tomato.waitForExistence(timeout: 4))
+        XCTAssertTrue(tomato.label.contains("Tomates cerises"))
+        XCTAssertTrue(tomato.label.contains("500 g"))
+        // The persistent menu remains available after the temporary capsule expires.
+        XCTAssertTrue(app.buttons["shopping.item.add"].waitForExistence(timeout: 7))
+        app.buttons["shopping.options"].tap()
+        app.buttons["shopping.undo.menu"].tap()
+        XCTAssertFalse(tomato.label.contains("cerises"))
+        XCTAssertTrue(tomato.label.contains("3"))
+
+        tomato.tap()
+        XCTAssertTrue(app.buttons["shopping.undo"].waitForExistence(timeout: 3))
+        app.buttons["shopping.undo"].tap()
+        XCTAssertEqual(tomato.value as? String, "À acheter")
+        tomato.swipeLeft()
+        app.buttons["Supprimer"].tap()
+        XCTAssertTrue(app.buttons["shopping.undo"].waitForExistence(timeout: 3))
+        app.buttons["shopping.undo"].tap()
+        XCTAssertTrue(tomato.waitForExistence(timeout: 4))
+        XCTAssertEqual(tomato.value as? String, "À acheter")
+
+        app.buttons["shopping.options"].tap()
+        app.buttons["shopping.aisles.order"].tap()
+        let dairy = app.cells.containing(.staticText, identifier: "shopping.order.dairy").firstMatch
+        let produce = app.cells.containing(.staticText, identifier: "shopping.order.produce").firstMatch
+        XCTAssertTrue(dairy.waitForExistence(timeout: 5))
+        // Grab the native reorder handle and give UIKit time to commit the drop.
+        dairy.coordinate(withNormalizedOffset: CGVector(dx: 0.92, dy: 0.5)).press(forDuration: 1,
+            thenDragTo: produce.coordinate(withNormalizedOffset: CGVector(dx: 0.92, dy: 0.15)),
+            withVelocity: .slow, thenHoldForDuration: 1)
+        screenshot(app, "Controls — Aisle order")
+        app.buttons["shopping.order.save"].tap()
+        let aislePredicate = NSPredicate(format: "identifier BEGINSWITH %@", "shopping.aisle.")
+        XCTAssertEqual(app.staticTexts.matching(aislePredicate).firstMatch.label, "Produits frais")
+        screenshot(app, "Controls — Custom aisle order")
+        for _ in 0..<5 where !toast.isHittable { app.swipeDown() }
+        toast.tap()
+        app.terminate()
+        app.launchArguments = ["-ui-testing"]
+        app.launch()
+        app.tabBars.buttons["Listes"].tap()
+        app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "shopping.list.")).firstMatch.tap()
+        XCTAssertEqual(app.staticTexts.matching(aislePredicate).firstMatch.label, "Produits frais")
+        XCTAssertFalse(app.staticTexts["shopping.filter.notice"].exists)
+        XCTAssertEqual(app.buttons["shopping.source.tomato-mozzarella-toast"].value as? String, "Non sélectionnée")
     }
 
     @MainActor

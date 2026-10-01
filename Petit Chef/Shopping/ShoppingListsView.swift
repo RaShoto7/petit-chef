@@ -174,6 +174,10 @@ struct ShoppingListDetailView: View {
     @State private var savingTemplate = false
     @State private var savedTemplate = false
     @State private var reference: ShoppingRecipeReference?
+    @State private var filteredReferenceID: UUID?
+    @State private var editingItem: ShoppingItem?
+    @State private var orderingAisles = false
+    @State private var visibleUndoID: UUID?
     @State private var templateName = ""
     @State private var adding = false
     @State private var renaming = false
@@ -185,6 +189,7 @@ struct ShoppingListDetailView: View {
     var body: some View {
         Group {
             if let list = shopping.list(listID) {
+                let visibleItems = list.items(for: filteredReferenceID)
                 let multipleSources = Set(list.items.compactMap(\.sourceLabel)).count > 1 || list.recipes.count > 1
                 List {
                     Section {
@@ -199,19 +204,44 @@ struct ShoppingListDetailView: View {
                                 ScrollView(.horizontal) {
                                     HStack(spacing: 8) {
                                         ForEach(list.recipes) { recipe in
-                                            Button { reference = recipe } label: {
-                                                Text(recipe.displayLabel)
-                                                    .font(.subheadline)
-                                                    .padding(.horizontal, 14).padding(.vertical, 10)
-                                                    .background(.white, in: .capsule)
+                                            Button {
+                                                withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.25)) {
+                                                    filteredReferenceID = filteredReferenceID == recipe.id ? nil : recipe.id
+                                                }
+                                            } label: {
+                                                HStack(spacing: 8) {
+                                                    Text(recipe.displayLabel)
+                                                    if filteredReferenceID == recipe.id {
+                                                        Image(systemName: "xmark").font(.caption2.weight(.semibold))
+                                                            .accessibilityHidden(true)
+                                                    }
+                                                }
+                                                .font(.subheadline)
+                                                .padding(.horizontal, 14).padding(.vertical, 10)
+                                                .foregroundStyle(filteredReferenceID == recipe.id ? Color.white : ShoppingStyle.ink)
+                                                .background(filteredReferenceID == recipe.id ? ShoppingStyle.ink : Color.white, in: .capsule)
                                             }
                                             .buttonStyle(ShoppingBubbleButtonStyle())
                                             .accessibilityLabel(recipe.label)
+                                            .accessibilityValue(filteredReferenceID == recipe.id ? "Filtre actif" : "Non sélectionnée")
+                                            .accessibilityHint("Toucher pour filtrer ou retirer le filtre. Appui long pour les quantités prévues.")
+                                            .accessibilityAddTraits(filteredReferenceID == recipe.id ? .isSelected : [])
+                                            .accessibilityAction(named: "Voir les quantités") { reference = recipe }
+                                            .contextMenu {
+                                                Button("Voir les quantités", systemImage: "list.bullet") { reference = recipe }
+                                                    .accessibilityIdentifier("shopping.source.details")
+                                            }
                                             .accessibilityIdentifier("shopping.source.\(recipe.recipeID)")
                                         }
                                     }
                                 }
                                 .scrollIndicators(.hidden)
+                                .accessibilityIdentifier("shopping.sources")
+                                if filteredReferenceID != nil {
+                                    Text("Quantités totales de la liste")
+                                        .font(.caption).foregroundStyle(ShoppingStyle.muted)
+                                        .accessibilityIdentifier("shopping.filter.notice")
+                                }
                             }
                         }
                         .padding(.top, 8).padding(.bottom, 4)
@@ -220,8 +250,8 @@ struct ShoppingListDetailView: View {
                     .listRowInsets(EdgeInsets(top: 0, leading: 4, bottom: 0, trailing: 4))
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
-                    ForEach(ShoppingAisle.allCases) { aisle in
-                        let items = list.items.filter { !isInBasket($0) && $0.aisle == aisle }
+                    ForEach(shopping.aisleOrder) { aisle in
+                        let items = visibleItems.filter { !isInBasket($0) && $0.aisle == aisle }
                         if !items.isEmpty {
                             Section {
                                 ForEach(items) { item in row(item, showSource: multipleSources) }
@@ -234,9 +264,9 @@ struct ShoppingListDetailView: View {
                             }
                         }
                     }
-                    if list.items.contains(where: { isInBasket($0) }) {
+                    if visibleItems.contains(where: { isInBasket($0) }) {
                         Section {
-                            ForEach(list.items.filter { isInBasket($0) }) { item in
+                            ForEach(visibleItems.filter { isInBasket($0) }) { item in
                                 row(item, showSource: multipleSources)
                             }
                         } header: {
@@ -247,9 +277,9 @@ struct ShoppingListDetailView: View {
                                 .padding(.top, 4).padding(.bottom, 6)
                         }
                     }
-                    if list.items.isEmpty {
+                    if visibleItems.isEmpty {
                         Section {
-                            Text("Ajoute un article pour commencer.")
+                            Text(filteredReferenceID == nil ? "Ajoute un article pour commencer." : "Aucun article pour cette recette.")
                                 .font(.system(.body, design: .default))
                                 .foregroundStyle(ShoppingStyle.muted)
                                 .padding(.vertical, 18)
@@ -263,29 +293,57 @@ struct ShoppingListDetailView: View {
                 .listRowSeparatorTint(ShoppingStyle.separator)
                 .scrollContentBackground(.hidden)
                 .background(ShoppingStyle.canvas)
+                .onChange(of: list.recipes.map(\.id)) { _, ids in
+                    if let filteredReferenceID, !ids.contains(filteredReferenceID) { self.filteredReferenceID = nil }
+                }
+                .task(id: shopping.undoActions[listID]?.id) {
+                    guard let action = shopping.undoActions[listID] else { visibleUndoID = nil; return }
+                    visibleUndoID = action.id
+                    do { try await Task.sleep(for: .seconds(4.5)) } catch { return }
+                    if visibleUndoID == action.id { visibleUndoID = nil }
+                }
                 .safeAreaInset(edge: .bottom, spacing: 0) {
-                    Button { name = ""; amount = ""; adding = true } label: {
-                        Label("Ajouter un article", systemImage: "plus")
-                            .font(.system(.body, design: .default, weight: .medium))
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 8)
+                    Group {
+                        if let action = shopping.undoActions[listID], visibleUndoID == action.id {
+                            Button(action: undo) {
+                                HStack(spacing: 20) {
+                                    Text(action.message).font(.subheadline)
+                                    Text("Annuler").font(.subheadline.weight(.semibold))
+                                }
+                                .padding(.horizontal, 12).padding(.vertical, 8)
+                            }
+                            .accessibilityLabel("Annuler : \(action.message)")
+                            .accessibilityIdentifier("shopping.undo")
+                        } else {
+                            Button { name = ""; amount = ""; adding = true } label: {
+                                Label("Ajouter un article", systemImage: "plus")
+                                    .font(.system(.body, design: .default, weight: .medium))
+                                    .padding(.horizontal, 16).padding(.vertical, 8)
+                            }
+                            .accessibilityIdentifier("shopping.item.add")
+                        }
                     }
                     .buttonStyle(.glass)
                     .controlSize(.large)
                     .buttonBorderShape(.capsule)
-                    .padding(.top, 12)
-                    .padding(.bottom, 12)
+                    .padding(.vertical, 12)
                     .frame(maxWidth: .infinity)
                     .background(ShoppingStyle.canvas)
-                    .accessibilityIdentifier("shopping.item.add")
+                    .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: visibleUndoID)
                 }
                 .toolbar {
                     ToolbarItem(placement: .topBarTrailing) {
-                        ShareLink(item: list.shareText) { Label("Partager la liste", systemImage: "square.and.arrow.up") }
+                        ShareLink(item: list.shareText(aisleOrder: shopping.aisleOrder)) { Label("Partager la liste", systemImage: "square.and.arrow.up") }
                             .accessibilityIdentifier("shopping.share")
                     }
                     ToolbarItem(placement: .topBarTrailing) {
                         Menu {
+                            if shopping.undoActions[listID] != nil {
+                                Button("Annuler le dernier geste", systemImage: "arrow.uturn.backward", action: undo)
+                                    .accessibilityIdentifier("shopping.undo.menu")
+                            }
+                            Button("Ordre des rayons", systemImage: "arrow.up.arrow.down") { orderingAisles = true }
+                                .accessibilityIdentifier("shopping.aisles.order")
                             Button("Ajouter une recette", systemImage: "book.closed") { addingRecipe = true }
                                 .accessibilityIdentifier("shopping.recipe.add")
                             Button("Dupliquer", systemImage: "plus.square.on.square") {
@@ -311,6 +369,14 @@ struct ShoppingListDetailView: View {
         .tint(ShoppingStyle.ink)
         .navigationBarTitleDisplayMode(.inline)
         .sensoryFeedback(.selection, trigger: checks) { _, _ in hapticsEnabled }
+        .sheet(item: $editingItem) { item in
+            ShoppingItemEditor(item: item, listID: listID)
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
+        }
+        .sheet(isPresented: $orderingAisles) {
+            ShoppingAisleOrderView(order: shopping.aisleOrder)
+        }
         .sheet(isPresented: $addingRecipe) {
             ShoppingRecipePicker(listID: listID) { addingRecipe = false }
         }
@@ -340,6 +406,13 @@ struct ShoppingListDetailView: View {
         .confirmationDialog("Supprimer cette liste ?", isPresented: $deleting, titleVisibility: .visible) {
             Button("Supprimer la liste", role: .destructive) { shopping.delete(listID); dismiss() }
         } message: { Text("Tous ses articles seront supprimés.") }
+    }
+
+    private func undo() {
+        pendingMoves.removeAll()
+        withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.25)) {
+            shopping.undoLastChange(in: listID)
+        }
     }
 
     private func isInBasket(_ item: ShoppingItem) -> Bool {
@@ -395,6 +468,8 @@ struct ShoppingListDetailView: View {
         .accessibilityValue(item.isChecked ? "Dans le panier" : "À acheter")
         .accessibilityIdentifier("shopping.item.\(item.id)")
         .contextMenu {
+            Button("Modifier l’article", systemImage: "pencil") { editingItem = item }
+                .accessibilityIdentifier("shopping.item.edit")
             Menu("Changer de rayon", systemImage: "square.grid.2x2") {
                 ForEach(ShoppingAisle.allCases) { aisle in
                     Button {

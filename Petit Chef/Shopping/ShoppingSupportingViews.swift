@@ -55,7 +55,7 @@ struct ShoppingRecipeSnapshot: View {
                 Section {
                     ForEach(list.items.filter { item in item.contributions?.contains(where: { $0.recipe.id == recipe.id }) == true }) { item in
                         HStack(alignment: .firstTextBaseline) {
-                            Text(item.name)
+                            Text((item.contributions ?? []).first(where: { $0.recipe.id == recipe.id })?.ingredientName ?? item.name)
                             Spacer()
                             Text((item.contributions ?? []).filter { $0.recipe.id == recipe.id }.map(\.amount).filter { !$0.isEmpty }.joined(separator: " + "))
                                 .foregroundStyle(.secondary).multilineTextAlignment(.trailing)
@@ -63,7 +63,7 @@ struct ShoppingRecipeSnapshot: View {
                         .padding(.vertical, 4)
                     }
                 } header: { Text("Dans cette liste") } footer: {
-                    Text("Quantités prévues lors de l’ajout. Modifier la recette ensuite ne change pas ces courses.")
+                    Text("Quantités prévues lors de l’ajout. Modifier un article dans les courses ne change pas ces références.")
                 }
             }
             .scrollContentBackground(.hidden)
@@ -122,5 +122,102 @@ struct ShoppingTemplatesView: View {
         }
         .tint(ShoppingStyle.ink)
         .fontDesign(.default)
+    }
+}
+
+
+struct ShoppingItemEditor: View {
+    let item: ShoppingItem
+    let listID: UUID
+    @Environment(ShoppingStore.self) private var shopping
+    @Environment(\.dismiss) private var dismiss
+    @State private var name: String
+    @State private var amount: String
+    @State private var aisle: ShoppingAisle
+
+    init(item: ShoppingItem, listID: UUID) {
+        self.item = item
+        self.listID = listID
+        _name = State(initialValue: item.name)
+        _amount = State(initialValue: item.amount)
+        _aisle = State(initialValue: item.aisle)
+    }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    TextField("Nom de l’article", text: $name)
+                        .accessibilityIdentifier("shopping.edit.name")
+                    TextField("Quantité (facultatif)", text: $amount)
+                        .accessibilityIdentifier("shopping.edit.amount")
+                } header: { Text("Article") }
+                Section {
+                    Picker("Rayon", selection: $aisle) {
+                        ForEach(shopping.aisleOrder) { aisle in Text(aisle.title).tag(aisle) }
+                    }
+                    .accessibilityIdentifier("shopping.edit.aisle")
+                } footer: {
+                    if item.sourceLabel != nil {
+                        Text("La modification concerne les courses. Les quantités prévues pour chaque recette restent inchangées.")
+                    }
+                }
+            }
+            .scrollContentBackground(.hidden)
+            .background(ShoppingStyle.canvas)
+            .navigationTitle("Modifier l’article")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button("Annuler") { dismiss() } }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Enregistrer") {
+                        shopping.editItem(item.id, in: listID, name: name, amount: amount, aisle: aisle)
+                        dismiss()
+                    }
+                    .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    .accessibilityIdentifier("shopping.edit.save")
+                }
+            }
+        }
+        .fontDesign(.default)
+        .tint(ShoppingStyle.ink)
+    }
+}
+
+struct ShoppingAisleOrderView: View {
+    @Environment(ShoppingStore.self) private var shopping
+    @Environment(\.dismiss) private var dismiss
+    @State private var order: [ShoppingAisle]
+
+    init(order: [ShoppingAisle]) { _order = State(initialValue: order) }
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Section {
+                    ForEach(order) { aisle in
+                        Text(aisle.title).padding(.vertical, 10)
+                            .accessibilityIdentifier("shopping.order.\(aisle.rawValue)")
+                    }
+                    .onMove { source, destination in order.move(fromOffsets: source, toOffset: destination) }
+                } footer: {
+                    Text("Glisse les rayons dans l’ordre de ton magasin. Cet ordre s’applique à toutes tes listes et au partage.")
+                }
+            }
+            .environment(\.editMode, .constant(.active))
+            .scrollContentBackground(.hidden)
+            .background(ShoppingStyle.canvas)
+            .navigationTitle("Ordre des rayons")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button("Annuler") { dismiss() } }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Enregistrer") { shopping.setAisleOrder(order); dismiss() }
+                        .accessibilityIdentifier("shopping.order.save")
+                }
+            }
+        }
+        .fontDesign(.default)
+        .tint(ShoppingStyle.ink)
     }
 }

@@ -1,7 +1,7 @@
 import Foundation
 import Observation
 
-nonisolated enum ShoppingAisle: String, Codable, CaseIterable, Identifiable {
+nonisolated enum ShoppingAisle: String, Codable, CaseIterable, Identifiable, Hashable {
     case produce, bakery, meat, dairy, pantry, frozen, other
     var id: String { rawValue }
     var title: String {
@@ -14,6 +14,12 @@ nonisolated enum ShoppingAisle: String, Codable, CaseIterable, Identifiable {
         case .frozen: "Surgelés"
         case .other: "Autres"
         }
+    }
+
+    static func completeOrder(_ preferred: [Self]) -> [Self] {
+        var result: [Self] = []
+        for aisle in preferred + allCases where !result.contains(aisle) { result.append(aisle) }
+        return result
     }
 
     static func suggested(for name: String) -> Self {
@@ -43,6 +49,7 @@ nonisolated struct ShoppingRecipeReference: Codable, Equatable, Identifiable {
 nonisolated struct ShoppingContribution: Codable, Equatable {
     var recipe: ShoppingRecipeReference
     var amount: String
+    var ingredientName: String?
 }
 
 /// Optional new fields preserve lists saved by the first version.
@@ -56,6 +63,7 @@ nonisolated struct ShoppingItem: Codable, Equatable, Identifiable {
     var unit: String?
     var contributions: [ShoppingContribution]?
     var aisleOverride: ShoppingAisle?
+    var isManuallyEdited: Bool?
 
     var aisle: ShoppingAisle { aisleOverride ?? ShoppingAisle.suggested(for: name) }
     var sourceLabel: String? {
@@ -109,9 +117,16 @@ nonisolated struct ShoppingList: Codable, Equatable, Identifiable {
         }
         return result
     }
-    var shareText: String {
+    func items(for referenceID: UUID?) -> [ShoppingItem] {
+        guard let referenceID else { return items }
+        return items.filter { $0.contributions?.contains(where: { $0.recipe.id == referenceID }) == true }
+    }
+
+    var shareText: String { shareText(aisleOrder: ShoppingAisle.allCases) }
+
+    func shareText(aisleOrder: [ShoppingAisle]) -> String {
         var lines = [title, ""]
-        for aisle in ShoppingAisle.allCases {
+        for aisle in ShoppingAisle.completeOrder(aisleOrder) {
             let entries = items.filter { $0.aisle == aisle }
             guard !entries.isEmpty else { continue }
             if items.contains(where: { $0.aisle != aisle }) { lines.append(aisle.title) }
@@ -119,7 +134,7 @@ nonisolated struct ShoppingList: Codable, Equatable, Identifiable {
                 lines.append("\(item.isChecked ? "☑" : "☐") \(item.name)\(item.amount.isEmpty ? "" : " · \(item.amount)")")
                 if let contributions = item.contributions, !contributions.isEmpty {
                     for contribution in contributions {
-                        lines.append("  \(contribution.recipe.label)\(contribution.amount.isEmpty ? "" : " : \(contribution.amount)")")
+                        lines.append("  \(item.isManuallyEdited == true ? "Prévu pour " : "")\(contribution.recipe.label)\(contribution.amount.isEmpty ? "" : " : \(contribution.amount)")")
                     }
                 } else if let source = item.source { lines[lines.count - 1] += " (\(source))" }
             }
@@ -128,17 +143,31 @@ nonisolated struct ShoppingList: Codable, Equatable, Identifiable {
     }
 }
 
+/// One reversible item operation per list, kept only during this app session.
+nonisolated struct ShoppingUndo: Identifiable {
+    var id = UUID()
+    var item: ShoppingItem
+    var index: Int
+    var message: String
+}
+
 @MainActor @Observable
 final class ShoppingStore {
     private(set) var lists: [ShoppingList] = []
     private(set) var templates: [ShoppingList] = []
+    private(set) var aisleOrder = ShoppingAisle.allCases
+    private(set) var undoActions: [UUID: ShoppingUndo] = [:]
     var requestedListID: UUID?
     @ObservationIgnored private let defaults: UserDefaults
     private let key = "petitchef.shopping.lists.v1"
+    private let aisleOrderKey = "petitchef.shopping.aisle-order.v1"
     private let templateKey = "petitchef.shopping.templates.v1"
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
+        if let data = defaults.data(forKey: aisleOrderKey), let saved = try? JSONDecoder().decode([ShoppingAisle].self, from: data) {
+            aisleOrder = ShoppingAisle.completeOrder(saved)
+        }
         if let data = defaults.data(forKey: key), let saved = try? JSONDecoder().decode([ShoppingList].self, from: data) { lists = saved }
         if let data = defaults.data(forKey: templateKey), let saved = try? JSONDecoder().decode([ShoppingList].self, from: data) { templates = saved }
     }
@@ -156,15 +185,18 @@ final class ShoppingStore {
 
     func add(recipe: Recipe, ingredientIDs: Set<String>, to listID: UUID) {
         guard let index = lists.firstIndex(where: { $0.id == listID }) else { return }
+        let ingredients = recipe.ingredientGroups.flatMap(\.ingredients).filter { ingredientIDs.contains($0.id) }
+        guard !ingredients.isEmpty else { return }
+        undoActions.removeValue(forKey: listID)
         let reference = ShoppingRecipeReference(recipeID: recipe.id, title: recipe.title, servings: recipe.servings, displayTitle: recipe.shortTitle)
-        for ingredient in recipe.ingredientGroups.flatMap(\.ingredients) where ingredientIDs.contains(ingredient.id) {
+        for ingredient in ingredients {
             let amount = ingredient.quantity == nil ? ingredient.unit : IngredientFormatting.quantity(ingredient)
-            let contribution = ShoppingContribution(recipe: reference, amount: amount)
+            let contribution = ShoppingContribution(recipe: reference, amount: amount, ingredientName: ingredient.name)
             let newItem = ShoppingItem(name: ingredient.name, amount: amount, source: reference.label,
                                        quantity: ingredient.quantity, unit: ingredient.unit, contributions: [contribution])
             // Never reuse purchased items, parse free text or convert incompatible units.
             if let existing = lists[index].items.firstIndex(where: {
-                !$0.isChecked && $0.contributions != nil && $0.mergeName == newItem.mergeName &&
+                !$0.isChecked && $0.isManuallyEdited != true && $0.contributions != nil && $0.mergeName == newItem.mergeName &&
                 $0.unit.map(ShoppingItem.normalized) == ShoppingItem.normalized(ingredient.unit) &&
                 ($0.quantity == nil) == (ingredient.quantity == nil)
             }) {
@@ -179,6 +211,7 @@ final class ShoppingStore {
     func addItem(name: String, amount: String, to listID: UUID) {
         let name = name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !name.isEmpty, let index = lists.firstIndex(where: { $0.id == listID }) else { return }
+        undoActions.removeValue(forKey: listID)
         lists[index].items.append(ShoppingItem(name: name, amount: amount.trimmingCharacters(in: .whitespacesAndNewlines)))
         persist()
     }
@@ -186,6 +219,8 @@ final class ShoppingStore {
     func setAisle(_ aisle: ShoppingAisle, for itemID: UUID, in listID: UUID) {
         guard let index = lists.firstIndex(where: { $0.id == listID }),
               let item = lists[index].items.firstIndex(where: { $0.id == itemID }) else { return }
+        guard lists[index].items[item].aisle != aisle else { return }
+        remember(lists[index].items[item], at: item, in: listID, message: "Rayon modifié")
         lists[index].items[item].aisleOverride = aisle
         persist()
     }
@@ -193,13 +228,64 @@ final class ShoppingStore {
     func toggle(_ itemID: UUID, in listID: UUID) {
         guard let index = lists.firstIndex(where: { $0.id == listID }),
               let item = lists[index].items.firstIndex(where: { $0.id == itemID }) else { return }
+        remember(lists[index].items[item], at: item, in: listID,
+                 message: lists[index].items[item].isChecked ? "Retiré du panier" : "Ajouté au panier")
         lists[index].items[item].isChecked.toggle()
         persist()
     }
 
     func removeItem(_ itemID: UUID, from listID: UUID) {
         guard let index = lists.firstIndex(where: { $0.id == listID }) else { return }
-        lists[index].items.removeAll { $0.id == itemID }
+        guard let item = lists[index].items.firstIndex(where: { $0.id == itemID }) else { return }
+        remember(lists[index].items[item], at: item, in: listID, message: "Article supprimé")
+        lists[index].items.remove(at: item)
+        persist()
+    }
+
+    func editItem(_ itemID: UUID, in listID: UUID, name: String, amount: String, aisle: ShoppingAisle) {
+        let name = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        let amount = amount.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !name.isEmpty, let index = lists.firstIndex(where: { $0.id == listID }),
+              let position = lists[index].items.firstIndex(where: { $0.id == itemID }) else { return }
+        let old = lists[index].items[position]
+        guard old.name != name || old.amount != amount || old.aisle != aisle else { return }
+        remember(old, at: position, in: listID, message: "Article modifié")
+        var edited = old
+        if old.name != name || old.amount != amount {
+            if var contributions = edited.contributions {
+                for entry in contributions.indices where contributions[entry].ingredientName == nil {
+                    contributions[entry].ingredientName = old.name
+                }
+                edited.contributions = contributions
+            }
+            edited.quantity = nil
+            edited.unit = nil
+            edited.isManuallyEdited = true
+        }
+        edited.name = name
+        edited.amount = amount
+        edited.aisleOverride = aisle
+        lists[index].items[position] = edited
+        persist()
+    }
+
+    func setAisleOrder(_ order: [ShoppingAisle]) {
+        aisleOrder = ShoppingAisle.completeOrder(order)
+        if let data = try? JSONEncoder().encode(aisleOrder) { defaults.set(data, forKey: aisleOrderKey) }
+    }
+
+    private func remember(_ item: ShoppingItem, at index: Int, in listID: UUID, message: String) {
+        undoActions[listID] = ShoppingUndo(item: item, index: index, message: message)
+    }
+
+    func undoLastChange(in listID: UUID) {
+        guard let action = undoActions.removeValue(forKey: listID),
+              let index = lists.firstIndex(where: { $0.id == listID }) else { return }
+        if let position = lists[index].items.firstIndex(where: { $0.id == action.item.id }) {
+            lists[index].items[position] = action.item
+        } else {
+            lists[index].items.insert(action.item, at: min(action.index, lists[index].items.count))
+        }
         persist()
     }
 
@@ -250,6 +336,7 @@ final class ShoppingStore {
     }
 
     func delete(_ listID: UUID) {
+        undoActions.removeValue(forKey: listID)
         lists.removeAll { $0.id == listID }
         persist()
     }

@@ -194,4 +194,126 @@ struct ShoppingStoreTests {
         #expect(ShoppingAisle.suggested(for: "Produit inconnu") == .other)
     }
 
+
+    @Test func editingKeepsHistoricalContributionsAndPreventsFutureAutomaticMerges() throws {
+        let suite = "ShoppingTests.\(UUID())"
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let store = ShoppingStore(defaults: defaults)
+        let id = store.create(title: "Semaine")
+        store.add(recipe: RecipeCatalog.burgerAndFries, ingredientIDs: ["tomato"], to: id)
+        store.add(recipe: RecipeCatalog.tomatoToast, ingredientIDs: ["tomatoes"], to: id)
+        let original = try #require(store.list(id)?.items.first)
+        store.editItem(original.id, in: id, name: "  Tomates cerises  ", amount: "  500 g  ", aisle: .produce)
+        let edited = try #require(store.list(id)?.items.first)
+        #expect(edited.name == "Tomates cerises" && edited.amount == "500 g")
+        #expect(edited.contributions == original.contributions)
+        #expect(edited.contributions?.map(\.ingredientName) == ["Tomate", "Tomates"])
+        #expect(edited.quantity == nil && edited.unit == nil && edited.isManuallyEdited == true)
+        #expect(ShoppingStore(defaults: defaults).list(id)?.items.first == edited)
+        store.undoLastChange(in: id)
+        #expect(store.list(id)?.items.first == original)
+        store.editItem(original.id, in: id, name: "Tomate", amount: "5", aisle: .produce)
+        store.add(recipe: RecipeCatalog.burgerAndFries, ingredientIDs: ["tomato"], to: id)
+        #expect(store.list(id)?.items.count == 2)
+        #expect(store.list(id)?.items.first?.amount == "5")
+        #expect(store.undoActions[id] == nil)
+    }
+
+    @Test func undoRestoresCheckDeletionAndAisleWithoutChangingOtherLists() throws {
+        let suite = "ShoppingTests.\(UUID())"
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let store = ShoppingStore(defaults: defaults)
+        let id = store.create(title: "Courses"), other = store.create(title: "Demain")
+        for name in ["Pain", "Citron", "Beurre"] { store.addItem(name: name, amount: "1", to: id) }
+        store.addItem(name: "Lait", amount: "1 l", to: other)
+        let original = try #require(store.list(id))
+        let item = original.items[1]
+        store.toggle(item.id, in: id)
+        #expect(store.list(id)?.items[1].isChecked == true)
+        store.undoLastChange(in: id)
+        #expect(store.list(id) == original)
+        store.removeItem(item.id, from: id)
+        #expect(store.list(id)?.items.count == 2)
+        store.toggle(try #require(store.list(other)?.items.first?.id), in: other)
+        store.undoLastChange(in: id)
+        #expect(store.list(id) == original)
+        #expect(store.list(other)?.items.first?.isChecked == true)
+        store.setAisle(.pantry, for: item.id, in: id)
+        store.undoLastChange(in: id)
+        #expect(store.list(id) == original)
+        #expect(ShoppingStore(defaults: defaults).list(id) == original)
+        #expect(ShoppingStore(defaults: defaults).undoActions.isEmpty)
+        store.removeItem(original.items[0].id, from: id)
+        store.removeItem(original.items[2].id, from: id)
+        store.undoLastChange(in: id)
+        #expect(store.list(id)?.items.map(\.id) == [original.items[1].id, original.items[2].id])
+        store.undoLastChange(in: id)
+        #expect(store.list(id)?.items.count == 2)
+    }
+
+    @Test func invalidAndUnchangedEditsPreserveUndoAndAisleOnlyEditsKeepMerging() throws {
+        let suite = "ShoppingTests.\(UUID())"
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let store = ShoppingStore(defaults: defaults)
+        let id = store.create(title: "Courses")
+        store.add(recipe: RecipeCatalog.burgerAndFries, ingredientIDs: ["tomato"], to: id)
+        let item = try #require(store.list(id)?.items.first)
+        store.editItem(item.id, in: id, name: item.name, amount: item.amount, aisle: .pantry)
+        #expect(store.list(id)?.items.first?.quantity == 1)
+        let undoID = store.undoActions[id]?.id
+        store.editItem(item.id, in: id, name: "  ", amount: "2", aisle: .produce)
+        store.editItem(item.id, in: id, name: item.name, amount: item.amount, aisle: .pantry)
+        #expect(store.undoActions[id]?.id == undoID)
+        store.add(recipe: RecipeCatalog.tomatoToast, ingredientIDs: ["tomatoes"], to: id)
+        #expect(store.list(id)?.items.count == 1)
+        #expect(store.list(id)?.items.first?.quantity == 3)
+        #expect(store.list(id)?.items.first?.aisle == .pantry)
+        #expect(store.undoActions[id] == nil)
+    }
+
+    @Test func customAisleOrderIsCompletePersistedAndUsedInSharing() throws {
+        let suite = "ShoppingTests.\(UUID())"
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let store = ShoppingStore(defaults: defaults)
+        store.setAisleOrder([.dairy, .produce, .dairy])
+        #expect(store.aisleOrder.count == ShoppingAisle.allCases.count)
+        #expect(Array(store.aisleOrder.prefix(2)) == [.dairy, .produce])
+        #expect(ShoppingStore(defaults: defaults).aisleOrder == store.aisleOrder)
+        let id = store.create(title: "Courses")
+        store.addItem(name: "Citron", amount: "1", to: id)
+        store.addItem(name: "Beurre", amount: "25 g", to: id)
+        let list = try #require(store.list(id))
+        let text = list.shareText(aisleOrder: store.aisleOrder)
+        #expect(text.hasPrefix("Courses\n\nProduits frais\n☐ Beurre"))
+        #expect(text.contains("Fruits & légumes\n☐ Citron"))
+        defaults.set(Data("[\"unknown\"]".utf8), forKey: "petitchef.shopping.aisle-order.v1")
+        #expect(ShoppingStore(defaults: defaults).aisleOrder == ShoppingAisle.allCases)
+    }
+
+    @Test func recipeFiltersIncludeSharedAndCheckedIngredientsWithTheirFullQuantities() throws {
+        let suite = "ShoppingTests.\(UUID())"
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let store = ShoppingStore(defaults: defaults)
+        let id = store.create(title: "Semaine")
+        store.add(recipe: RecipeCatalog.burgerAndFries, ingredientIDs: ["tomato", "buns"], to: id)
+        store.add(recipe: RecipeCatalog.tomatoToast, ingredientIDs: ["tomatoes", "garlic"], to: id)
+        store.addItem(name: "Café", amount: "1 paquet", to: id)
+        let list = try #require(store.list(id))
+        let burger = try #require(list.recipes.first { $0.recipeID == "burger-and-oven-fries" })
+        let toast = try #require(list.recipes.first { $0.recipeID == "tomato-mozzarella-toast" })
+        #expect(list.items(for: nil).count == 4)
+        #expect(list.items(for: burger.id).map(\.name) == ["Pains à burger", "Tomate"])
+        #expect(list.items(for: toast.id).map(\.name) == ["Tomate", "Ail"])
+        #expect(list.items(for: toast.id).first?.amount == "3")
+        #expect(list.items(for: UUID()).isEmpty)
+        let tomato = try #require(list.items.first { $0.mergeName == "tomate" })
+        store.toggle(tomato.id, in: id)
+        #expect(store.list(id)?.items(for: toast.id).first?.isChecked == true)
+    }
+
 }
