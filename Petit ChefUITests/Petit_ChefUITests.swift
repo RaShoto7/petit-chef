@@ -10,7 +10,7 @@ final class Petit_ChefUITests: XCTestCase {
         app.launchArguments = ["-ui-testing", "-reset-cooking"]
         app.launch()
         app.tabBars.buttons["Listes"].tap()
-        XCTAssertTrue(app.staticTexts["Une recette. Et c’est listé."].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Aucune liste"].waitForExistence(timeout: 5))
         screenshot(app, "Shopping — Empty")
         app.tabBars.buttons["Recettes"].tap()
         app.buttons["home.recipe.burger-and-oven-fries"].tap()
@@ -77,7 +77,7 @@ final class Petit_ChefUITests: XCTestCase {
         app.navigationBars.buttons.element(boundBy: 0).tap()
         let list = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "shopping.list.")).firstMatch
         XCTAssertTrue(list.waitForExistence(timeout: 5))
-        XCTAssertTrue(list.label.contains("Prête."))
+        XCTAssertEqual(list.value as? String, "Terminée")
         screenshot(app, "Motion — Complete card")
         app.terminate()
         app.launchArguments = ["-ui-testing"]

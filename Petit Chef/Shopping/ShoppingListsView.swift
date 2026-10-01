@@ -1,75 +1,72 @@
 import SwiftUI
 
-/// A quiet, shared visual language for the shopping screens only.
 private enum ShoppingStyle {
-    static let background = Color(red: 0.975, green: 0.975, blue: 0.962)
-    static let ink = Color(red: 0.15, green: 0.18, blue: 0.16)
-    static let muted = Color(red: 0.42, green: 0.46, blue: 0.43)
-    static let line = ink.opacity(0.08)
-
-    static func caption(_ text: String) -> some View {
-        Text(text.uppercased())
-            .font(.system(size: 11, weight: .medium, design: .default))
-            .tracking(1.8)
-            .foregroundStyle(muted)
-    }
+    static let ink = Color(red: 0.12, green: 0.12, blue: 0.12)
+    static let muted = Color(red: 0.48, green: 0.48, blue: 0.48)
+    static let separator = Color.black.opacity(0.07)
 }
 
 struct ShoppingListsView: View {
     @Environment(ShoppingStore.self) private var shopping
     @Binding var path: [UUID]
     var openRecipes: () -> Void
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @Namespace private var listTransition
     @State private var creating = false
     @State private var title = ""
-    @ScaledMetric(relativeTo: .largeTitle) private var headingSize = 44
 
     var body: some View {
         NavigationStack(path: $path) {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 34) {
-                    VStack(alignment: .leading, spacing: 12) {
-                        ShoppingStyle.caption("Petit Chef")
-                        HStack(alignment: .firstTextBaseline) {
-                            Text("Listes")
-                                .font(.system(size: headingSize, weight: .regular, design: .default))
-                                .tracking(-1.8)
-                                .accessibilityAddTraits(.isHeader)
-                            Spacer()
-                            if !shopping.lists.isEmpty {
-                                Text(shopping.lists.count == 1 ? "1 liste" : "\(shopping.lists.count) listes")
-                                    .font(.system(.caption, design: .default, weight: .medium).monospacedDigit())
-                                    .padding(.horizontal, 12).padding(.vertical, 8)
-                                    .background(.white.opacity(0.8), in: .capsule)
-                                    .foregroundStyle(ShoppingStyle.muted)
-                                    .accessibilityLabel("\(shopping.lists.count) listes")
-                            }
+            List {
+                Section {
+                    Text("Listes")
+                        .font(.system(.largeTitle, design: .default, weight: .bold))
+                        .tracking(-0.8)
+                        .padding(.top, 16).padding(.bottom, 22)
+                        .accessibilityAddTraits(.isHeader)
+                        .accessibilityIdentifier("shopping.home.title")
+                }
+                .listRowInsets(EdgeInsets(top: 0, leading: 24, bottom: 0, trailing: 24))
+                .listRowSeparator(.hidden)
+
+                if shopping.lists.isEmpty {
+                    Section {
+                        VStack(spacing: 18) {
+                            Image(systemName: "checklist")
+                                .font(.system(size: 30, weight: .regular))
+                                .foregroundStyle(ShoppingStyle.muted)
+                            Text("Aucune liste")
+                                .font(.system(.title3, design: .default, weight: .medium))
+                            Button("Choisir une recette", action: openRecipes)
+                                .font(.system(.subheadline, design: .default))
+                                .buttonStyle(.glass).controlSize(.large)
                         }
-                    }
-                    if shopping.lists.isEmpty {
-                        emptyState.modifier(ShoppingEntrance(delay: 0.05))
-                    } else {
-                        LazyVStack(spacing: 22) {
-                            ForEach(Array(shopping.lists.enumerated()), id: \.element.id) { index, list in
-                                NavigationLink(value: list.id) {
-                                    ShoppingListCard(list: list)
-                                        .modifier(ShoppingEntrance(delay: min(Double(index) * 0.06, 0.24)))
-                                        .matchedTransitionSource(id: list.id, in: listTransition)
-                                }
-                                .buttonStyle(ShoppingPressStyle())
-                                .accessibilityIdentifier("shopping.list.\(list.id)")
+                        .padding(.vertical, 70)
+                        .frame(maxWidth: .infinity)
+                    }.listRowSeparator(.hidden)
+                } else {
+                    Section {
+                        ForEach(Array(shopping.lists.enumerated()), id: \.element.id) { index, list in
+                            NavigationLink(value: list.id) {
+                                Text(list.title)
+                                    .font(.system(.body, design: .default, weight: .medium))
+                                    .padding(.vertical, 18)
+                                    .fixedSize(horizontal: false, vertical: true)
                             }
+                            .modifier(ShoppingEntrance(delay: min(Double(index) * 0.025, 0.1)))
+                            .listRowInsets(EdgeInsets(top: 0, leading: 24, bottom: 0, trailing: 24))
+                            .accessibilityIdentifier("shopping.list.\(list.id)")
+                            .accessibilityValue(!list.items.isEmpty && list.remainingCount == 0 ? "Terminée" : "")
                         }
                     }
                 }
-                .padding(.horizontal, 26)
-                .padding(.top, 18)
-                .padding(.bottom, 36)
-                .frame(maxWidth: DesignSystem.Layout.maximumContentWidth)
-                .frame(maxWidth: .infinity)
             }
-            .scrollIndicators(.hidden)
+            .listStyle(.plain)
+            .scrollContentBackground(.hidden)
+            .listRowBackground(Color.white)
+            .listRowSeparatorTint(ShoppingStyle.separator)
+            .background(.white)
+            .fontDesign(.default)
+            .foregroundStyle(ShoppingStyle.ink)
+            .tint(ShoppingStyle.ink)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
@@ -77,129 +74,17 @@ struct ShoppingListsView: View {
                         .accessibilityIdentifier("shopping.create")
                 }
             }
-            .navigationDestination(for: UUID.self) { id in
-                if reduceMotion { ShoppingListDetailView(listID: id) }
-                else {
-                    ShoppingListDetailView(listID: id)
-                        .navigationTransition(.zoom(sourceID: id, in: listTransition))
-                }
-            }
+            .navigationDestination(for: UUID.self) { ShoppingListDetailView(listID: $0) }
             .alert("Nouvelle liste", isPresented: $creating) {
                 TextField("Mes courses", text: $title)
                 Button("Créer") { path.append(shopping.create(title: title)) }
                 Button("Annuler", role: .cancel) {}
             }
-            .fontDesign(.default)
-            .foregroundStyle(ShoppingStyle.ink)
-            .background(ShoppingStyle.background)
         }
-    }
-
-    private var emptyState: some View {
-        VStack(spacing: 28) {
-            ShoppingPaperMark()
-                .frame(width: 120, height: 150)
-                .padding(.bottom, 8)
-            VStack(spacing: 12) {
-                Text("Une recette. Et c’est listé.")
-                    .font(.system(.title3, design: .default, weight: .medium))
-                    .tracking(-0.4)
-                Text("Choisis une recette.\nOn s’occupe des ingrédients.")
-                    .font(.system(.subheadline, design: .default))
-                    .foregroundStyle(ShoppingStyle.muted)
-                    .multilineTextAlignment(.center)
-                    .lineSpacing(4)
-            }
-            Button("Choisir une recette", action: openRecipes)
-                .buttonStyle(.glass).controlSize(.large)
-        }
-        .padding(.vertical, 64)
-        .frame(maxWidth: .infinity)
     }
 }
 
-private struct ShoppingListCard: View {
-    let list: ShoppingList
-    private var checked: Int { list.items.count - list.remainingCount }
-    private var complete: Bool { !list.items.isEmpty && list.remainingCount == 0 }
-    private var preview: [ShoppingItem] { Array(list.items.filter { !$0.isChecked }.prefix(2)) }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 24) {
-            HStack(alignment: .top, spacing: 20) {
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack(spacing: 7) {
-                        Circle().fill(complete ? DesignSystem.Colors.accent : ShoppingStyle.ink.opacity(0.3))
-                            .frame(width: 4, height: 4)
-                        ShoppingStyle.caption(complete ? "Dans le panier" : "Courses")
-                    }
-                    Text(list.title)
-                        .font(.system(.title2, design: .default, weight: .medium))
-                        .tracking(-0.7)
-                        .multilineTextAlignment(.leading)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                Spacer(minLength: 0)
-                ShoppingPaperMark()
-                    .frame(width: 40, height: 50)
-                    .padding(.trailing, 4).padding(.top, 4)
-            }
-            if !preview.isEmpty {
-                VStack(alignment: .leading, spacing: 9) {
-                    ForEach(preview) { item in
-                        HStack(spacing: 10) {
-                            Circle().strokeBorder(ShoppingStyle.ink.opacity(0.2), lineWidth: 0.8)
-                                .frame(width: 9, height: 9)
-                            Text(item.name)
-                                .font(.system(.subheadline, design: .default))
-                                .foregroundStyle(ShoppingStyle.muted)
-                                .lineLimit(1)
-                        }
-                    }
-                }.accessibilityHidden(true)
-            }
-            Rectangle().fill(ShoppingStyle.line).frame(height: 0.5)
-            HStack(alignment: .center, spacing: 16) {
-                HStack(alignment: .firstTextBaseline, spacing: 9) {
-                    Text(complete ? "Prête." : "\(list.remainingCount)")
-                        .font(.system(size: 36, weight: .light, design: .default).monospacedDigit())
-                        .tracking(-1.2)
-                        .contentTransition(.numericText())
-                    if !complete {
-                        Text("à acheter")
-                            .font(.system(.caption, design: .default))
-                            .foregroundStyle(ShoppingStyle.muted)
-                    }
-                }
-                Spacer(minLength: 0)
-                ShoppingProgressRing(checked: checked, total: list.items.count)
-                    .frame(width: 42, height: 42)
-                Image(systemName: "arrow.up.right")
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundStyle(ShoppingStyle.muted)
-            }
-        }
-        .padding(26)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background {
-            RoundedRectangle(cornerRadius: 28)
-                .fill(LinearGradient(colors: [.white, complete ? DesignSystem.Colors.sage.opacity(0.32) : Color.white.opacity(0.82)], startPoint: .topLeading, endPoint: .bottomTrailing))
-        }
-        .overlay { RoundedRectangle(cornerRadius: 28).strokeBorder(.white, lineWidth: 1) }
-        .overlay { RoundedRectangle(cornerRadius: 28).strokeBorder(ShoppingStyle.line, lineWidth: 0.5) }
-        .background {
-            RoundedRectangle(cornerRadius: 28)
-                .fill(.white.opacity(0.65))
-                .overlay { RoundedRectangle(cornerRadius: 28).strokeBorder(ShoppingStyle.line, lineWidth: 0.5) }
-                .padding(.horizontal, 8).offset(y: 8)
-        }
-        .shadow(color: ShoppingStyle.ink.opacity(0.045), radius: 22, x: 0, y: 12)
-        .padding(.bottom, 8)
-        .accessibilityElement(children: .combine)
-    }
-}
-
-/// Each appearance finishes in a single, finite spring; no perpetual movement.
+/// A short fade and four-point arrival, disabled with Reduce Motion.
 private struct ShoppingEntrance: ViewModifier {
     var delay: Double = 0
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -208,26 +93,13 @@ private struct ShoppingEntrance: ViewModifier {
     func body(content: Content) -> some View {
         content
             .opacity(appeared || reduceMotion ? 1 : 0)
-            .offset(y: appeared || reduceMotion ? 0 : 14)
-            .blur(radius: appeared || reduceMotion ? 0 : 2)
+            .offset(y: appeared || reduceMotion ? 0 : 4)
             .task {
                 guard !appeared else { return }
                 if reduceMotion { appeared = true; return }
                 do { try await Task.sleep(for: .milliseconds(30)) } catch { return }
-                withAnimation(.spring(response: 0.6, dampingFraction: 0.88).delay(delay)) {
-                    appeared = true
-                }
+                withAnimation(.easeOut(duration: 0.25).delay(delay)) { appeared = true }
             }
-    }
-}
-
-private struct ShoppingPressStyle: ButtonStyle {
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .scaleEffect(configuration.isPressed && !reduceMotion ? 0.975 : 1)
-            .rotation3DEffect(.degrees(configuration.isPressed && !reduceMotion ? 1 : 0), axis: (x: 1, y: 0, z: 0))
-            .animation(reduceMotion ? nil : .spring(response: 0.38, dampingFraction: 0.8), value: configuration.isPressed)
     }
 }
 
@@ -244,76 +116,20 @@ private struct ShoppingCheckmark: Shape {
 private struct ShoppingCheckControl: View {
     let checked: Bool
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
     var body: some View {
         ZStack {
-            Circle().strokeBorder(ShoppingStyle.ink.opacity(0.23), lineWidth: 1)
-            Circle().fill(ShoppingStyle.ink)
-                .scaleEffect(checked ? 1 : 0.01).opacity(checked ? 1 : 0)
-                .animation(reduceMotion ? nil : .spring(response: 0.32, dampingFraction: 0.7), value: checked)
+            Circle().strokeBorder(ShoppingStyle.muted.opacity(0.55), lineWidth: 1)
+            Circle().fill(ShoppingStyle.ink).opacity(checked ? 1 : 0)
+                .animation(reduceMotion ? nil : .easeOut(duration: 0.15), value: checked)
             ShoppingCheckmark()
                 .trim(from: 0, to: checked ? 1 : 0)
                 .stroke(.white, style: StrokeStyle(lineWidth: 1.6, lineCap: .round, lineJoin: .round))
                 .padding(5)
-                .animation(reduceMotion ? nil : .easeOut(duration: 0.22).delay(checked ? 0.08 : 0), value: checked)
-        }.frame(width: 24, height: 24).accessibilityHidden(true)
-    }
-}
-
-private struct ShoppingProgressRing: View {
-    let checked: Int
-    let total: Int
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-
-    var body: some View {
-        ZStack {
-            Circle().stroke(ShoppingStyle.ink.opacity(0.07), lineWidth: 2)
-            Circle()
-                .trim(from: 0, to: total > 0 ? CGFloat(checked) / CGFloat(total) : 0)
-                .stroke(DesignSystem.Colors.accent, style: StrokeStyle(lineWidth: 2, lineCap: .round))
-                .rotationEffect(.degrees(-90))
-            if total > 0 && checked == total {
-                Image(systemName: "checkmark").font(.system(size: 16, weight: .medium))
-            } else if total == 0 {
-                Image(systemName: "minus").font(.system(size: 11, weight: .regular))
-            } else {
-                Text("\(checked)/\(total)")
-                    .font(.system(size: 11, weight: .medium, design: .default).monospacedDigit())
-                    .contentTransition(.numericText())
-            }
+                .animation(reduceMotion ? nil : .easeOut(duration: 0.18), value: checked)
         }
-        .animation(reduceMotion ? nil : .spring(response: 0.55, dampingFraction: 0.85), value: checked)
-        .accessibilityLabel(total == 0 ? "Liste vide" : "\(checked) sur \(total) dans le panier")
-    }
-}
-
-/// An abstract paper object, drawn natively so it stays crisp at every text size.
-private struct ShoppingPaperMark: View {
-    var body: some View {
-        GeometryReader { geometry in
-            RoundedRectangle(cornerRadius: geometry.size.width * 0.17)
-                .fill(.white)
-                .overlay { RoundedRectangle(cornerRadius: geometry.size.width * 0.17).strokeBorder(ShoppingStyle.line, lineWidth: 0.7) }
-                .overlay(alignment: .topLeading) {
-                    VStack(alignment: .leading, spacing: geometry.size.height * 0.12) {
-                        ForEach(0..<3) { index in
-                            HStack(spacing: geometry.size.width * 0.10) {
-                                Circle().strokeBorder(ShoppingStyle.ink.opacity(0.22), lineWidth: 1).frame(width: geometry.size.width * 0.10, height: geometry.size.width * 0.10)
-                                Capsule().fill(ShoppingStyle.ink.opacity(0.10)).frame(width: geometry.size.width * (index == 1 ? 0.28 : 0.38), height: 1.5)
-                            }
-                        }
-                    }.padding(geometry.size.width * 0.20)
-                }
-                .rotationEffect(.degrees(-7))
-                .background {
-                    RoundedRectangle(cornerRadius: geometry.size.width * 0.17)
-                        .fill(.white.opacity(0.75))
-                        .overlay { RoundedRectangle(cornerRadius: geometry.size.width * 0.17).strokeBorder(ShoppingStyle.line, lineWidth: 0.7) }
-                        .rotationEffect(.degrees(7))
-                        .offset(x: 6, y: 7)
-                }
-                .shadow(color: ShoppingStyle.ink.opacity(0.06), radius: 18, x: 0, y: 12)
-                .accessibilityHidden(true)
-        }
+        .frame(width: 23, height: 23)
+        .accessibilityHidden(true)
     }
 }
 
@@ -331,60 +147,69 @@ struct ShoppingListDetailView: View {
     @State private var title = ""
     @State private var name = ""
     @State private var amount = ""
-    @ScaledMetric(relativeTo: .largeTitle) private var titleSize = 38
-    @ScaledMetric(relativeTo: .largeTitle) private var countSize = 60
 
     var body: some View {
         Group {
             if let list = shopping.list(listID) {
-                let sources = Array(Set(list.items.compactMap(\.source))).sorted()
+                let multipleSources = Set(list.items.compactMap(\.source)).count > 1
                 List {
                     Section {
-                        header(list, sources: sources)
-                            .modifier(ShoppingEntrance(delay: 0.02))
+                        Text(list.title)
+                            .font(.system(.largeTitle, design: .default, weight: .semibold))
+                            .tracking(-0.7)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .padding(.top, 16).padding(.bottom, 26)
+                            .modifier(ShoppingEntrance())
+                            .accessibilityIdentifier("shopping.detail.title")
+                            .accessibilityAddTraits(.isHeader)
                     }
-                    .listRowInsets(EdgeInsets(top: 8, leading: 6, bottom: 24, trailing: 6))
-                    .listRowBackground(Color.clear)
+                    .listRowInsets(EdgeInsets(top: 0, leading: 24, bottom: 0, trailing: 24))
                     .listRowSeparator(.hidden)
                     if list.items.contains(where: { !isInBasket($0) }) {
                         Section {
                             ForEach(list.items.filter { !isInBasket($0) }) { item in
-                                row(item, showSource: sources.count > 1)
+                                row(item, showSource: multipleSources)
                             }
-                        } header: { sectionTitle("À acheter", count: list.remainingCount) }
+                        }
                     }
                     if list.items.contains(where: { isInBasket($0) }) {
                         Section {
                             ForEach(list.items.filter { isInBasket($0) }) { item in
-                                row(item, showSource: sources.count > 1)
+                                row(item, showSource: multipleSources)
                             }
-                        } header: { sectionTitle("Dans le panier", count: list.items.count - list.remainingCount) }
+                        } header: {
+                            Text("Dans le panier")
+                                .font(.system(.subheadline, design: .default, weight: .medium))
+                                .textCase(nil)
+                                .foregroundStyle(ShoppingStyle.muted)
+                                .padding(.top, 20).padding(.bottom, 8)
+                        }
                     }
                     if list.items.isEmpty {
                         Section {
-                            Text("Ajoute les ingrédients d’une recette\nou compose ta liste librement.")
+                            Text("Ajoute un article pour commencer.")
                                 .font(.system(.body, design: .default))
                                 .foregroundStyle(ShoppingStyle.muted)
-                                .lineSpacing(5)
-                                .padding(.vertical, 22)
-                        }.listRowBackground(Color.clear).listRowSeparator(.hidden)
+                                .padding(.vertical, 18)
+                        }.listRowSeparator(.hidden)
                     }
                 }
-                .listStyle(.insetGrouped)
+                .listStyle(.plain)
+                .listRowSeparatorTint(ShoppingStyle.separator)
                 .scrollContentBackground(.hidden)
-                .background(ShoppingStyle.background)
-                .safeAreaInset(edge: .bottom) {
+                .background(.white)
+                .safeAreaInset(edge: .bottom, spacing: 0) {
                     Button { name = ""; amount = ""; adding = true } label: {
                         Label("Ajouter un article", systemImage: "plus")
-                            .font(.system(.subheadline, design: .default, weight: .medium))
-                            .padding(.horizontal, 14)
-                            .frame(minHeight: 40)
+                            .font(.system(.body, design: .default, weight: .medium))
+                            .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+                            .padding(.horizontal, 24).padding(.vertical, 8)
+                            .contentShape(.rect)
                     }
-                    .buttonStyle(.glass)
-                    .buttonBorderShape(.capsule)
+                    .buttonStyle(.plain)
+                    .background(.bar)
+                    .overlay(alignment: .top) { ShoppingStyle.separator.frame(height: 0.5) }
                     .accessibilityIdentifier("shopping.item.add")
-                    .padding(.top, 10).padding(.bottom, 14)
-                    .frame(maxWidth: .infinity)
                 }
                 .toolbar {
                     ToolbarItem(placement: .topBarTrailing) {
@@ -403,6 +228,7 @@ struct ShoppingListDetailView: View {
         .onDisappear { pendingMoves.removeAll() }
         .fontDesign(.default)
         .foregroundStyle(ShoppingStyle.ink)
+        .tint(ShoppingStyle.ink)
         .navigationBarTitleDisplayMode(.inline)
         .sensoryFeedback(.selection, trigger: checks) { _, _ in hapticsEnabled }
         .alert("Ajouter un article", isPresented: $adding) {
@@ -422,88 +248,29 @@ struct ShoppingListDetailView: View {
         } message: { Text("Tous ses articles seront supprimés.") }
     }
 
-    private func header(_ list: ShoppingList, sources: [String]) -> some View {
-        VStack(alignment: .leading, spacing: 14) {
-            ShoppingStyle.caption("Liste de courses")
-            Text(list.title)
-                .font(.system(size: titleSize, weight: .regular, design: .default))
-                .tracking(-1.4)
-                .fixedSize(horizontal: false, vertical: true)
-                .accessibilityIdentifier("shopping.detail.title")
-                .accessibilityAddTraits(.isHeader)
-            if sources.count == 1, let source = sources.first {
-                Text(source)
-                    .font(.system(.caption, design: .default))
-                    .foregroundStyle(ShoppingStyle.muted)
-            }
-            HStack(alignment: .center, spacing: 12) {
-                HStack(alignment: .firstTextBaseline, spacing: 12) {
-                    Text("\(list.remainingCount)")
-                        .font(.system(size: countSize, weight: .ultraLight, design: .default).monospacedDigit())
-                        .tracking(-2)
-                        .lineLimit(1).minimumScaleFactor(0.6)
-                        .contentTransition(.numericText())
-                    Text(list.remainingCount == 0 && !list.items.isEmpty ? "tout est prêt" : "à acheter")
-                        .font(.system(.subheadline, design: .default))
-                        .foregroundStyle(ShoppingStyle.muted)
-                }
-                .accessibilityElement(children: .ignore)
-                .accessibilityLabel(list.remainingCount == 0 && !list.items.isEmpty ? "Tout est dans le panier" : "\(list.remainingCount) ingrédients à acheter")
-                .accessibilityIdentifier("shopping.progress")
-                Spacer(minLength: 0)
-                if !list.items.isEmpty {
-                    ShoppingProgressRing(checked: list.items.count - list.remainingCount, total: list.items.count)
-                        .frame(width: 48, height: 48)
-                }
-            }.padding(.top, 10)
-        }
-        .padding(.top, 10)
-    }
-
-    private func sectionTitle(_ title: String, count: Int) -> some View {
-        HStack {
-            ShoppingStyle.caption(title)
-            Spacer()
-            Text("\(count)")
-                .font(.system(size: 11, weight: .medium, design: .default).monospacedDigit())
-                .foregroundStyle(ShoppingStyle.muted)
-        }.padding(.bottom, 8)
-    }
-
     private func isInBasket(_ item: ShoppingItem) -> Bool {
         pendingMoves[item.id] ?? item.isChecked
-    }
-
-    private func rowDelay(_ item: ShoppingItem) -> Double {
-        let index = shopping.list(listID)?.items.firstIndex(where: { $0.id == item.id }) ?? 0
-        return min(Double(index) * 0.035, 0.18)
     }
 
     private func toggle(_ item: ShoppingItem) {
         guard pendingMoves[item.id] == nil else { return }
         checks += 1
-        if reduceMotion {
-            shopping.toggle(item.id, in: listID)
-            return
-        }
-        // Persist immediately, but leave the row in place long enough to see the check draw.
-        // Dismissing during this visual phase cannot lose a purchase.
+        if reduceMotion { shopping.toggle(item.id, in: listID); return }
+        // Save the purchase immediately; the delay only allows the check to finish drawing.
         pendingMoves[item.id] = item.isChecked
-        withAnimation(.spring(response: 0.4, dampingFraction: 0.86)) {
-            shopping.toggle(item.id, in: listID)
-        }
+        withAnimation(.easeInOut(duration: 0.2)) { shopping.toggle(item.id, in: listID) }
         Task { @MainActor in
-            do { try await Task.sleep(for: .milliseconds(340)) } catch { return }
+            do { try await Task.sleep(for: .milliseconds(220)) } catch { return }
             guard pendingMoves[item.id] != nil else { return }
-            withAnimation(.smooth(duration: 0.45)) { pendingMoves.removeValue(forKey: item.id) }
+            withAnimation(.easeInOut(duration: 0.25)) { pendingMoves.removeValue(forKey: item.id) }
         }
     }
 
     private func row(_ item: ShoppingItem, showSource: Bool) -> some View {
         Button { toggle(item) } label: {
-            HStack(alignment: .center, spacing: 16) {
+            HStack(spacing: 16) {
                 ShoppingCheckControl(checked: item.isChecked)
-                VStack(alignment: .leading, spacing: 6) {
+                VStack(alignment: .leading, spacing: 5) {
                     Text(item.name)
                         .font(.system(.body, design: .default))
                         .strikethrough(item.isChecked, color: ShoppingStyle.muted.opacity(0.5))
@@ -513,26 +280,23 @@ struct ShoppingListDetailView: View {
                         Text(source).font(.system(.caption2, design: .default)).foregroundStyle(ShoppingStyle.muted)
                     }
                 }
-                Spacer(minLength: 0)
+                Spacer(minLength: 8)
                 if !item.amount.isEmpty {
                     Text(item.amount)
                         .font(.system(.subheadline, design: .default).monospacedDigit())
                         .foregroundStyle(ShoppingStyle.muted)
                         .multilineTextAlignment(.trailing)
                         .fixedSize(horizontal: false, vertical: true)
-                        .padding(.horizontal, 10).padding(.vertical, 7)
-                        .background(ShoppingStyle.background, in: RoundedRectangle(cornerRadius: 9))
                 }
             }
-            .frame(minHeight: 48)
-            .padding(.vertical, 5)
+            .frame(minHeight: 46)
+            .padding(.vertical, 8)
             .contentShape(.rect)
         }
         .buttonStyle(.plain)
         .disabled(pendingMoves[item.id] != nil)
-        .modifier(ShoppingEntrance(delay: rowDelay(item)))
-        .listRowInsets(EdgeInsets(top: 8, leading: 20, bottom: 8, trailing: 16))
-        .listRowSeparatorTint(ShoppingStyle.line)
+        .modifier(ShoppingEntrance())
+        .listRowInsets(EdgeInsets(top: 0, leading: 24, bottom: 0, trailing: 24))
         .listRowBackground(Color.white)
         .accessibilityValue(item.isChecked ? "Dans le panier" : "À acheter")
         .accessibilityIdentifier("shopping.item.\(item.id)")

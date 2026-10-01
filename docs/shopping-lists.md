@@ -4,24 +4,20 @@ La barre de navigation propose **Recettes** et **Listes**. Depuis une fiche rece
 
 Une liste permet de cocher et décocher les achats, d’ajouter un article libre avec une quantité, de supprimer un article par balayage, de renommer la liste et de la partager via la feuille de partage iOS. Le menu propose la suppression de la liste avec confirmation.
 
-Les listes sont conservées localement dans `UserDefaults`, avec un schéma Codable versionné (`petitchef.shopping.lists.v1`). Chaque export est un instantané : modifier ensuite une recette ne modifie pas les courses déjà prévues. Les apports de plusieurs recettes restent séparés et leur provenance reste visible ; aucune somme implicite entre unités ou préparations différentes. Ajouter une recette une seconde fois ajoute un nouveau lot d’achats, même si le précédent a déjà été coché.
+Les listes sont conservées localement dans `UserDefaults`, avec un schéma Codable versionné (`petitchef.shopping.lists.v1`). Chaque export est un instantané : modifier ensuite une recette ne modifie pas les courses déjà prévues. Les apports de plusieurs recettes restent séparés et leur provenance est conservée dans les données et le partage ; aucune somme implicite entre unités ou préparations différentes. Ajouter une recette une seconde fois ajoute un nouveau lot d’achats, même si le précédent a déjà été coché.
 
 Le partage est du texte avec les quantités, les recettes d’origine et l’état des cases. Pas de synchronisation iCloud ni de collaboration en temps réel dans cette version.
 
+## Interface et mouvement
+
+L’accueil affiche uniquement le titre « Listes », les noms des listes et l’accès à la création. Aucun compteur, aperçu d’ingrédients, anneau, illustration ni carte décorative.
+
+Le détail présente le titre et les ingrédients sur un fond blanc : cases circulaires, quantités alignées à droite, séparateurs fins. Les achats cochés rejoignent « Dans le panier ». L’ajout d’article reste accessible en bas ; partage et options utilisent les contrôles natifs. La provenance d’un article n’est affichée que si plusieurs recettes alimentent la liste.
+
+La navigation utilise la transition native standard. L’apparition est un fondu de 250 ms avec un déplacement de 4 points. Au cochage, les données sont sauvegardées immédiatement ; la coche se dessine, puis la ligne rejoint sa section après 220 ms, avec une transition de 250 ms. Réduire les animations supprime ces effets et le délai de déplacement. Les retours tactiles suivent le réglage de l’app.
+
 ## Vérification
 
-- Tests de domaine : portions ajustées, sélection, instantané indépendant de la recette, sauvegarde, cases cochées, renommage, suppression, export texte, lots séparés.
-- Test UI : onglets, état vide, export avec exclusion, case cochée, fermeture et relance, restauration, ouverture du partage.
-- L’anneau de progression et le déplacement des achats cochés s’animent doucement ; ces animations et le style tactile des cartes respectent Réduire les animations. Le cochage respecte le réglage des retours tactiles.
-
-## Direction visuelle
-
-Fond blanc cassé, cartes blanches à bord fin et léger décalage de papier, typographie système sans arrondi, grands chiffres légers et anneau de progression. Dans le détail, les quantités ont leur propre surface et la recette d’origine n’est affichée qu’une fois lorsqu’elle est commune à tous les articles. Le bouton d’ajout reste accessible en bas de l’écran.
-
-## Mouvement et interaction
-
-L’ouverture et le retour utilisent la transition de zoom native SwiftUI entre la carte et la liste. L’apparition des cartes et ingrédients se fait par un ressort amorti, avec un décalage court plafonné à 240 ms. La pression comprime légèrement la carte et lui donne une inclinaison discrète.
-
-Au cochage, les données sont enregistrées immédiatement. La coche se dessine pendant que la ligne reste en place ; après 340 ms, la ligne rejoint sa section avec une transition de 450 ms. Une sortie de l’écran termine ce décalage visuel sans affecter les achats sauvegardés. Les interactions en cours ne peuvent pas se doubler. Réduire les animations supprime le zoom, les apparitions et le délai de déplacement.
-
-Deux parcours UI valident l’export/cochage/reprise/partage et la sortie après cochage d’une liste entièrement terminée, puis sa réouverture et son décochage. Les cartes terminées prennent une teinte sauge, les cartes actives affichent un aperçu des deux prochains ingrédients.
+- Tests de domaine : portions, sélection, instantané, persistance, cochage, renommage, suppression et partage.
+- Deux parcours UI : export/exclusion/cochage/reprise/partage ; création/article libre/cochage/sortie/réouverture/décochage.
+- Captures contrôlées pour l’accueil, le détail, l’état vide et une liste terminée.
