@@ -52,6 +52,7 @@ final class Petit_ChefUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Frites · première cuisson"].exists)
         next(app, "Retourner les frites")
         // The countdown does not block reading or preparing a later step.
+        app.buttons["cooking.next"].press(forDuration: 0.8)
         app.buttons["cooking.skip"].tap()
         assertStep(app, "Cuire les steaks")
         screenshot(app, "06 — Navigation pendant la cuisson")
@@ -80,9 +81,9 @@ final class Petit_ChefUITests: XCTestCase {
         app.buttons["home.resume"].tap()
         XCTAssertTrue(app.staticTexts["Frites · première cuisson"].waitForExistence(timeout: 4))
         screenshot(app, "07 — Minuteur restauré")
-        app.buttons["cooking.timer.options"].firstMatch.tap()
-        app.buttons["Terminer maintenant"].tap()
-        app.buttons["Cuisson vérifiée · terminer"].tap()
+        app.buttons["cooking.timer.stop"].firstMatch.tap()
+        XCTAssertEqual(app.sheets.count, 0)
+        XCTAssertFalse(app.buttons["cooking.timer.stop"].exists)
         XCTAssertFalse(app.staticTexts["Frites · première cuisson"].exists)
         app.buttons["cooking.minimize"].tap()
         app.buttons["home.account"].tap()
@@ -148,6 +149,83 @@ final class Petit_ChefUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Allergènes"].exists)
         XCTAssertFalse(app.staticTexts["Références de la recette"].exists)
         screenshot(app, "10 — Allergènes")
+    }
+
+    @MainActor
+    func testToastDisclosuresNavigationAndCompletion() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing", "-reset-cooking"]
+        app.launch()
+        let toast = app.buttons["home.recipe.tomato-mozzarella-toast"]
+        XCTAssertTrue(toast.waitForExistence(timeout: 8))
+        screenshot(app, "T00 — Accueil italique")
+        toast.tap()
+        XCTAssertTrue(app.staticTexts["recipe.title"].waitForExistence(timeout: 4))
+        screenshot(app, "T01 — Tartines")
+        let steps = app.buttons["recipe.disclosure.steps"]
+        for _ in 0..<5 where !steps.isHittable { app.swipeUp() }
+        let equipment = app.buttons["recipe.disclosure.equipment"]
+        for _ in 0..<3 {
+            steps.tap()
+            XCTAssertEqual(steps.value as? String, "Déplié")
+            XCTAssertTrue(app.staticTexts["Préchauffer le four"].exists)
+            steps.tap()
+            XCTAssertEqual(steps.value as? String, "Replié")
+            for _ in 0..<3 where !equipment.isHittable { app.swipeUp() }
+            equipment.tap()
+            XCTAssertEqual(equipment.value as? String, "Déplié")
+            equipment.tap()
+            XCTAssertEqual(equipment.value as? String, "Replié")
+        }
+        screenshot(app, "T02 — Verre et sections")
+        app.buttons["recipe.start"].tap()
+        assertStep(app, "Préchauffer le four")
+        XCTAssertFalse(app.buttons["cooking.previous"].exists)
+        XCTAssertFalse(app.buttons["cooking.overview"].exists)
+        XCTAssertFalse(app.buttons["cooking.replay"].exists)
+        Thread.sleep(forTimeInterval: 3) // Capture the gesture after arrival.
+        screenshot(app, "T03 — Préchauffage Blender")
+        next(app, "Découper les ingrédients")
+        Thread.sleep(forTimeInterval: 5) // Capture the gesture after arrival.
+        screenshot(app, "T04 — Découpe Blender")
+        app.buttons["cooking.previous"].tap()
+        assertStep(app, "Préchauffer le four")
+        XCTAssertFalse(app.buttons["cooking.previous"].exists)
+        next(app, "Découper les ingrédients")
+        next(app, "Garnir le pain")
+        Thread.sleep(forTimeInterval: 8) // Capture the gesture after arrival.
+        screenshot(app, "T05 — Garniture Blender")
+        next(app, "Gratiner les tartines")
+        Thread.sleep(forTimeInterval: 7) // Capture the gesture after arrival.
+        screenshot(app, "T06 — Gratinage Blender")
+        next(app, "Assaisonner les tomates")
+        Thread.sleep(forTimeInterval: 4) // Capture the gesture after arrival.
+        screenshot(app, "T07 — Mélange Blender")
+        let timer = app.buttons["cooking.timer.edit"]
+        XCTAssertTrue(timer.isHittable)
+        XCTAssertGreaterThan(timer.frame.midY, app.staticTexts["cooking.step.title"].frame.maxY)
+        XCTAssertLessThan(timer.frame.maxY, app.buttons["cooking.next"].frame.minY)
+        app.buttons["cooking.timer.stop"].firstMatch.tap()
+        XCTAssertEqual(app.sheets.count, 0)
+        XCTAssertFalse(app.buttons["cooking.timer.stop"].exists)
+        next(app, "Servir les tartines")
+        Thread.sleep(forTimeInterval: 7) // Capture the gesture after arrival.
+        screenshot(app, "T08 — Dressage Blender")
+        XCTAssertFalse(app.buttons["cooking.skip"].exists)
+        app.buttons["cooking.next"].tap()
+        XCTAssertTrue(app.buttons["cooking.finish"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.buttons["cooking.options"].exists)
+        XCTAssertFalse(app.buttons["cooking.minimize"].exists)
+        screenshot(app, "T09 — Fin épurée")
+        let finish = app.buttons["cooking.finish"]
+        expectation(for: NSPredicate(format: "enabled == true"), evaluatedWith: finish)
+        waitForExpectations(timeout: 4)
+        XCTAssertEqual(finish.label, "Terminer")
+        finish.tap()
+        XCTAssertTrue(app.staticTexts["home.title"].waitForExistence(timeout: 5))
+        XCTAssertTrue(toast.isHittable)
+        XCTAssertFalse(app.staticTexts["recipe.title"].exists)
+        XCTAssertFalse(app.buttons["home.resume"].exists)
     }
 
     private func coloredFraction(_ image: UIImage) throws -> Double {

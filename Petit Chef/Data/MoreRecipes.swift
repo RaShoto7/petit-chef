@@ -46,9 +46,9 @@ nonisolated extension RecipeCatalog {
         ],
         equipment: ["Four", "Plaque", "Planche", "Couteau", "Bol"],
         steps: [
-            step("preheat-toast", "Préchauffer le four", "Préchauffer le four à 180 °C. Disposer le pain sur une plaque.", active: 2),
+            step("preheat-toast", "Préchauffer le four", "Préchauffer le four à 180 °C.", active: 2),
             step("slice-tomatoes", "Découper les ingrédients", "Couper les tomates en dés et la mozzarella égouttée en tranches. Couper l’ail en deux.", active: 3, dependencies: ["preheat-toast"]),
-            step("build-toast", "Garnir le pain", "Frotter le pain avec l’ail. Répartir la moitié de l’huile et la mozzarella sur les tartines.", active: 2, dependencies: ["slice-tomatoes"]),
+            step("build-toast", "Garnir le pain", "Disposer le pain sur une plaque. Frotter chaque tranche avec l’ail. Répartir la moitié de l’huile et la mozzarella.", active: 2, dependencies: ["slice-tomatoes"]),
             step("bake-toast", "Gratiner les tartines", "Enfourner à 180 °C pendant 8 minutes. Vérifier que la mozzarella a fondu et que les bords du pain sont dorés.", active: 1, passive: 8, parallel: "Assaisonne les tomates pendant ce temps.", dependencies: ["build-toast"], timer: RecipeTimer(id: "toast-bake", label: "Tartines", durationSeconds: 480)),
             step("dress-tomatoes", "Assaisonner les tomates", "Mélanger les tomates avec le reste d’huile et la moitié du basilic. Assaisonner.", active: 2, startAfter: "bake-toast"),
             step("serve-toast", "Servir les tartines", "Répartir les tomates sur les tartines chaudes. Ajouter le reste du basilic et servir.", active: 1, dependencies: ["bake-toast", "dress-tomatoes"])
