@@ -3,7 +3,8 @@ import SwiftUI
 private enum ShoppingStyle {
     static let ink = Color(red: 0.12, green: 0.12, blue: 0.12)
     static let muted = Color(red: 0.48, green: 0.48, blue: 0.48)
-    static let separator = Color.black.opacity(0.07)
+    static let separator = Color.black.opacity(0.06)
+    static let canvas = Color(red: 0.97, green: 0.97, blue: 0.975)
 }
 
 struct ShoppingListsView: View {
@@ -15,20 +16,16 @@ struct ShoppingListsView: View {
 
     var body: some View {
         NavigationStack(path: $path) {
-            List {
-                Section {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 28) {
                     Text("Listes")
                         .font(.system(.largeTitle, design: .default, weight: .bold))
                         .tracking(-0.8)
-                        .padding(.top, 16).padding(.bottom, 22)
+                        .padding(.top, 16)
                         .accessibilityAddTraits(.isHeader)
                         .accessibilityIdentifier("shopping.home.title")
-                }
-                .listRowInsets(EdgeInsets(top: 0, leading: 24, bottom: 0, trailing: 24))
-                .listRowSeparator(.hidden)
 
-                if shopping.lists.isEmpty {
-                    Section {
+                    if shopping.lists.isEmpty {
                         VStack(spacing: 18) {
                             Image(systemName: "checklist")
                                 .font(.system(size: 30, weight: .regular))
@@ -39,31 +36,42 @@ struct ShoppingListsView: View {
                                 .font(.system(.subheadline, design: .default))
                                 .buttonStyle(.glass).controlSize(.large)
                         }
-                        .padding(.vertical, 70)
+                        .padding(.vertical, 64)
                         .frame(maxWidth: .infinity)
-                    }.listRowSeparator(.hidden)
-                } else {
-                    Section {
-                        ForEach(Array(shopping.lists.enumerated()), id: \.element.id) { index, list in
-                            NavigationLink(value: list.id) {
-                                Text(list.title)
-                                    .font(.system(.body, design: .default, weight: .medium))
-                                    .padding(.vertical, 18)
-                                    .fixedSize(horizontal: false, vertical: true)
+                        .background(.white, in: .rect(cornerRadius: 28))
+                    } else {
+                        LazyVStack(spacing: 12) {
+                            ForEach(Array(shopping.lists.enumerated()), id: \.element.id) { index, list in
+                                NavigationLink(value: list.id) {
+                                    HStack(spacing: 20) {
+                                        Text(list.title)
+                                            .font(.system(.body, design: .default, weight: .medium))
+                                            .fixedSize(horizontal: false, vertical: true)
+                                        Spacer(minLength: 0)
+                                        Image(systemName: "chevron.right")
+                                            .font(.system(size: 12, weight: .semibold))
+                                            .foregroundStyle(ShoppingStyle.muted.opacity(0.65))
+                                            .accessibilityHidden(true)
+                                    }
+                                    .padding(.horizontal, 24)
+                                    .padding(.vertical, 26)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .background(.white, in: .rect(cornerRadius: 26))
+                                    .contentShape(.rect(cornerRadius: 26))
+                                }
+                                .buttonStyle(ShoppingBubbleButtonStyle())
+                                .modifier(ShoppingEntrance(delay: min(Double(index) * 0.025, 0.1)))
+                                .accessibilityIdentifier("shopping.list.\(list.id)")
+                                .accessibilityValue(!list.items.isEmpty && list.remainingCount == 0 ? "Terminée" : "")
                             }
-                            .modifier(ShoppingEntrance(delay: min(Double(index) * 0.025, 0.1)))
-                            .listRowInsets(EdgeInsets(top: 0, leading: 24, bottom: 0, trailing: 24))
-                            .accessibilityIdentifier("shopping.list.\(list.id)")
-                            .accessibilityValue(!list.items.isEmpty && list.remainingCount == 0 ? "Terminée" : "")
                         }
                     }
                 }
+                .padding(.horizontal, 20)
+                .padding(.bottom, 24)
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .listStyle(.plain)
-            .scrollContentBackground(.hidden)
-            .listRowBackground(Color.white)
-            .listRowSeparatorTint(ShoppingStyle.separator)
-            .background(.white)
+            .background(ShoppingStyle.canvas)
             .fontDesign(.default)
             .foregroundStyle(ShoppingStyle.ink)
             .tint(ShoppingStyle.ink)
@@ -81,6 +89,17 @@ struct ShoppingListsView: View {
                 Button("Annuler", role: .cancel) {}
             }
         }
+    }
+}
+
+private struct ShoppingBubbleButtonStyle: ButtonStyle {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed && !reduceMotion ? 0.98 : 1)
+            .opacity(configuration.isPressed ? 0.75 : 1)
+            .animation(reduceMotion ? nil : .spring(response: 0.3, dampingFraction: 0.8), value: configuration.isPressed)
     }
 }
 
@@ -158,12 +177,13 @@ struct ShoppingListDetailView: View {
                             .font(.system(.largeTitle, design: .default, weight: .semibold))
                             .tracking(-0.7)
                             .fixedSize(horizontal: false, vertical: true)
-                            .padding(.top, 16).padding(.bottom, 26)
+                            .padding(.top, 8).padding(.bottom, 4)
                             .modifier(ShoppingEntrance())
                             .accessibilityIdentifier("shopping.detail.title")
                             .accessibilityAddTraits(.isHeader)
                     }
-                    .listRowInsets(EdgeInsets(top: 0, leading: 24, bottom: 0, trailing: 24))
+                    .listRowInsets(EdgeInsets(top: 0, leading: 4, bottom: 0, trailing: 4))
+                    .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
                     if list.items.contains(where: { !isInBasket($0) }) {
                         Section {
@@ -182,7 +202,7 @@ struct ShoppingListDetailView: View {
                                 .font(.system(.subheadline, design: .default, weight: .medium))
                                 .textCase(nil)
                                 .foregroundStyle(ShoppingStyle.muted)
-                                .padding(.top, 20).padding(.bottom, 8)
+                                .padding(.top, 4).padding(.bottom, 6)
                         }
                     }
                     if list.items.isEmpty {
@@ -191,24 +211,30 @@ struct ShoppingListDetailView: View {
                                 .font(.system(.body, design: .default))
                                 .foregroundStyle(ShoppingStyle.muted)
                                 .padding(.vertical, 18)
-                        }.listRowSeparator(.hidden)
+                        }
+                        .listRowBackground(Color.white)
+                        .listRowSeparator(.hidden)
                     }
                 }
-                .listStyle(.plain)
+                .listStyle(.insetGrouped)
+                .listSectionSpacing(20)
                 .listRowSeparatorTint(ShoppingStyle.separator)
                 .scrollContentBackground(.hidden)
-                .background(.white)
+                .background(ShoppingStyle.canvas)
                 .safeAreaInset(edge: .bottom, spacing: 0) {
                     Button { name = ""; amount = ""; adding = true } label: {
                         Label("Ajouter un article", systemImage: "plus")
                             .font(.system(.body, design: .default, weight: .medium))
-                            .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
-                            .padding(.horizontal, 24).padding(.vertical, 8)
-                            .contentShape(.rect)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 8)
                     }
-                    .buttonStyle(.plain)
-                    .background(.bar)
-                    .overlay(alignment: .top) { ShoppingStyle.separator.frame(height: 0.5) }
+                    .buttonStyle(.glass)
+                    .controlSize(.large)
+                    .buttonBorderShape(.capsule)
+                    .padding(.top, 12)
+                    .padding(.bottom, 12)
+                    .frame(maxWidth: .infinity)
+                    .background(ShoppingStyle.canvas)
                     .accessibilityIdentifier("shopping.item.add")
                 }
                 .toolbar {
@@ -296,7 +322,7 @@ struct ShoppingListDetailView: View {
         .buttonStyle(.plain)
         .disabled(pendingMoves[item.id] != nil)
         .modifier(ShoppingEntrance())
-        .listRowInsets(EdgeInsets(top: 0, leading: 24, bottom: 0, trailing: 24))
+        .listRowInsets(EdgeInsets(top: 0, leading: 20, bottom: 0, trailing: 20))
         .listRowBackground(Color.white)
         .accessibilityValue(item.isChecked ? "Dans le panier" : "À acheter")
         .accessibilityIdentifier("shopping.item.\(item.id)")

@@ -10,11 +10,11 @@ Le partage est du texte avec les quantités, les recettes d’origine et l’ét
 
 ## Interface et mouvement
 
-L’accueil affiche uniquement le titre « Listes », les noms des listes et l’accès à la création. Aucun compteur, aperçu d’ingrédients, anneau, illustration ni carte décorative.
+L’accueil affiche le titre « Listes » et une bulle blanche arrondie par liste, sur un fond gris très clair. Chaque bulle contient uniquement le nom et un chevron discret. Aucun compteur ni aperçu d’ingrédients. Le bouton de création reste dans la barre supérieure.
 
-Le détail présente le titre et les ingrédients sur un fond blanc : cases circulaires, quantités alignées à droite, séparateurs fins. Les achats cochés rejoignent « Dans le panier ». L’ajout d’article reste accessible en bas ; partage et options utilisent les contrôles natifs. La provenance d’un article n’est affichée que si plusieurs recettes alimentent la liste.
+Le détail regroupe les ingrédients dans des panneaux blancs arrondis : cases circulaires, quantités alignées à droite et séparateurs fins. Les achats cochés rejoignent un panneau « Dans le panier ». L’ajout d’article reste accessible dans une capsule de verre en bas ; partage et options utilisent les contrôles natifs. La provenance d’un article n’est affichée que si plusieurs recettes alimentent la liste.
 
-La navigation utilise la transition native standard. L’apparition est un fondu de 250 ms avec un déplacement de 4 points. Au cochage, les données sont sauvegardées immédiatement ; la coche se dessine, puis la ligne rejoint sa section après 220 ms, avec une transition de 250 ms. Réduire les animations supprime ces effets et le délai de déplacement. Les retours tactiles suivent le réglage de l’app.
+Les bulles se compriment légèrement au toucher (échelle 0,98, ressort de 300 ms). La navigation utilise la transition native standard. L’apparition est un fondu de 250 ms avec un déplacement de 4 points. Au cochage, les données sont sauvegardées immédiatement ; la coche se dessine, puis la ligne rejoint sa section après 220 ms, avec une transition de 250 ms. Réduire les animations supprime les mouvements de pression et d’apparition et le délai de déplacement. Les retours tactiles suivent le réglage de l’app.
 
 ## Vérification
 
