@@ -18,7 +18,7 @@ Prérequis : **Xcode 27**, **iOS 27 Simulator** et **Metal Toolchain**. Le scrip
 
 ## Direction visuelle : tartines
 
-Accueil en serif italique New York, titres de recette en serif, cartes Liquid Glass transparentes aux contours fermés, minuteur ancré en bas et sections au dépliage stable. Les six préparations des tartines utilisent des croquis vectoriels animés. Chaque transition sépare le départ, une courte respiration et l’arrivée ; le geste commence ensuite. Les commandes inutiles disparaissent au début et à la fin ; **Terminer** revient directement à l’accueil. [Choix de rendu et limites](docs/design/tartines-premium.md).
+Accueil en Fraunces Italic embarquée, titres de recette en serif, cartes Liquid Glass transparentes aux contours fermés, minuteur ancré en bas et sections au dépliage stable. Les préparations des tartines utilisent des croquis vectoriels animés ; le dressage teste une nouvelle scène réalisée en 3D dans Blender et lue en vidéo transparente. [Pilote et recherche de frameworks](docs/design/animation-pilot/README.md). Chaque transition sépare le départ, une courte respiration et l’arrivée ; le geste commence ensuite. Les commandes inutiles disparaissent au début et à la fin ; **Terminer** revient directement à l’accueil. [Choix de rendu et limites](docs/design/tartines-premium.md).
 
 ## Version 0.4
 
@@ -61,7 +61,7 @@ Les préférences d’ingrédients ne modifient pas une session déjà commencé
 
 ## Vérification
 
-La suite comprend 21 tests unitaires et 4 parcours UI (personnalisation/navigation/reprise, ajout/suppression, illustrations et tartines). Pour cette itération visuelle, les parcours burger et tartines ont été revérifiés sur iPhone 18 Pro Simulator, iOS 27. Les tests UI ordinaires utilisent un stockage séparé et des notifications locales désactivées. Le test `testSystemTimerAuthorizationAndBackground` exerce séparément AlarmKit réel, avec son autorisation système, puis annule le minuteur. Ce contrôle a été ignoré explicitement sur ce simulateur : AlarmKit refuse l’autorisation, y compris après compilation signée localement. L’affichage réel de la Dynamic Island n’est donc pas encore validé.
+La suite comprend 23 tests unitaires et 4 parcours UI (personnalisation/navigation/reprise, ajout/suppression, illustrations et tartines). Pour le pilote Blender et Fraunces, les 23 tests unitaires et le parcours UI tartines ont été vérifiés sur iPhone 18 Pro Simulator, iOS 27. Le parcours burger a été vérifié lors de l’itération précédente. Les tests UI ordinaires utilisent un stockage séparé et des notifications locales désactivées. Le test `testSystemTimerAuthorizationAndBackground` exerce séparément AlarmKit réel, avec son autorisation système, puis annule le minuteur. Ce contrôle a été ignoré explicitement sur ce simulateur : AlarmKit refuse l’autorisation, y compris après compilation signée localement. L’affichage réel de la Dynamic Island n’est donc pas encore validé.
 
 ```sh
 xcodebuild -project 'Petit Chef.xcodeproj' -scheme 'Petit Chef' \

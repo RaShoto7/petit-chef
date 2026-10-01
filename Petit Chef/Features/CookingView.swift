@@ -167,8 +167,14 @@ struct CookingView: View {
     @ViewBuilder
     private func preparationScene(_ step: RecipeStep) -> some View {
         if cooking.recipe?.id == "tomato-mozzarella-toast" {
-            ToastSketchAnimation(stepID: step.id, isPlaying: !isAdvancing)
-                .clipShape(.rect(cornerRadius: 32))
+            Group {
+                if step.id == "serve-toast" {
+                    AuthoredCookingAnimation(name: "toast-plating", isPlaying: !isAdvancing)
+                } else {
+                    ToastSketchAnimation(stepID: step.id, isPlaying: !isAdvancing)
+                }
+            }
+            .clipShape(.rect(cornerRadius: 32))
         } else {
             AnimatedCookingIllustration(stepID: step.id, recipeID: cooking.recipe?.id ?? "")
         }

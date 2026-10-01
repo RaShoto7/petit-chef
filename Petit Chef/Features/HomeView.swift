@@ -13,10 +13,9 @@ struct HomeView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
                     Text("mes recettes.")
-                        .font(.system(size: headingSize, weight: .regular, design: .serif).italic())
-                        .fontDesign(.serif)
-                        .italic()
-                        .tracking(-1.8)
+                        .font(.custom("FrauncesPetitChef-Italic", fixedSize: headingSize))
+                        .fontDesign(nil)
+                        .tracking(-1.1)
                         .accessibilityAddTraits(.isHeader)
                         .accessibilityIdentifier("home.title")
                     if cooking.hasActiveSession { resumeCard }
