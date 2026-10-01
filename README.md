@@ -56,13 +56,13 @@ Si la signature signale « resource fork / Finder information », placer Derived
 - `CookingWidgets/` : présentation du compte à rebours en activité en direct, Dynamic Island compacte, étendue et minimale.
 - `Illustrations/` : illustrations du catalogue et gestes Canvas chorégraphiés (60 images/s demandées, 30 en économie d’énergie), bouton de relecture et Réduire les animations respecté. `Shaders/` : révélation au pinceau, grain fixe et chaleur en Metal.
 - `Features/` : accueil, fiche, éditeur d’ingrédients, cuisine et paramètres.
-- `Shopping/` : listes persistantes, sélection des ingrédients, suivi des achats et partage texte.
+- `Shopping/` : listes persistantes par rayon, ingrédients regroupés avec références aux recettes, portions à l’export, modèles réutilisables, suivi des achats et partage texte.
 
 Les préférences d’ingrédients ne modifient pas une session déjà commencée. Elles ne réécrivent pas non plus les instructions culinaires. Les durées et températures ne sont pas multipliées avec les portions. Les allergènes restent une information de référence à vérifier après toute substitution.
 
 ## Vérification
 
-24 tests unitaires et 5 parcours UI (personnalisation/navigation/reprise, ajout/suppression, contrôle des illustrations rendues listes de courses et reprise d’une liste terminée) passent sur iPhone 18 Pro Simulator, iOS 27. Les tests UI ordinaires utilisent un stockage séparé et des notifications locales désactivées. Le test `testSystemTimerAuthorizationAndBackground` exerce séparément AlarmKit réel, avec son autorisation système, puis annule le minuteur. Ce contrôle a été ignoré explicitement sur ce simulateur : AlarmKit refuse l’autorisation, y compris après compilation signée localement. L’affichage réel de la Dynamic Island n’est donc pas encore validé.
+Le projet comprend 30 tests unitaires et 6 parcours UI ordinaires. La dernière évolution des listes est vérifiée par 9 tests de domaine et 3 parcours UI sur iPhone 18 Pro Simulator, iOS 27 : export/reprise/partage, sauvegarde au cochage, recettes multiples/portions/rayons/modèles. Les tests UI ordinaires utilisent un stockage séparé et des notifications locales désactivées. Le test `testSystemTimerAuthorizationAndBackground` exerce séparément AlarmKit réel, avec son autorisation système, puis annule le minuteur. Ce contrôle a été ignoré explicitement sur ce simulateur : AlarmKit refuse l’autorisation, y compris après compilation signée localement. L’affichage réel de la Dynamic Island n’est donc pas encore validé.
 
 ```sh
 xcodebuild -project 'Petit Chef.xcodeproj' -scheme 'Petit Chef' \

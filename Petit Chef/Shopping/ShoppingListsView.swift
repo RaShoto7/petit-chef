@@ -1,6 +1,6 @@
 import SwiftUI
 
-private enum ShoppingStyle {
+enum ShoppingStyle {
     static let ink = Color(red: 0.12, green: 0.12, blue: 0.12)
     static let muted = Color(red: 0.48, green: 0.48, blue: 0.48)
     static let separator = Color.black.opacity(0.06)
@@ -11,6 +11,7 @@ struct ShoppingListsView: View {
     @Environment(ShoppingStore.self) private var shopping
     @Binding var path: [UUID]
     var openRecipes: () -> Void
+    @State private var showingTemplates = false
     @State private var creating = false
     @State private var title = ""
 
@@ -78,7 +79,14 @@ struct ShoppingListsView: View {
             .foregroundStyle(ShoppingStyle.ink)
             .tint(ShoppingStyle.ink)
             .navigationBarTitleDisplayMode(.inline)
+            .sheet(isPresented: $showingTemplates) {
+                ShoppingTemplatesView { id in showingTemplates = false; path.append(id) }
+            }
             .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Modèles", systemImage: "bookmark") { showingTemplates = true }
+                        .accessibilityIdentifier("shopping.templates")
+                }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Nouvelle liste", systemImage: "plus") { title = ""; creating = true }
                         .accessibilityIdentifier("shopping.create")
@@ -162,6 +170,11 @@ struct ShoppingListDetailView: View {
     @AppStorage("hapticsEnabled") private var hapticsEnabled = true
     @State private var checks = 0
     @State private var pendingMoves: [UUID: Bool] = [:]
+    @State private var addingRecipe = false
+    @State private var savingTemplate = false
+    @State private var savedTemplate = false
+    @State private var reference: ShoppingRecipeReference?
+    @State private var templateName = ""
     @State private var adding = false
     @State private var renaming = false
     @State private var deleting = false
@@ -172,25 +185,52 @@ struct ShoppingListDetailView: View {
     var body: some View {
         Group {
             if let list = shopping.list(listID) {
-                let multipleSources = Set(list.items.compactMap(\.source)).count > 1
+                let multipleSources = Set(list.items.compactMap(\.sourceLabel)).count > 1 || list.recipes.count > 1
                 List {
                     Section {
-                        Text(list.title)
-                            .font(.system(.largeTitle, design: .default, weight: .semibold))
-                            .tracking(-0.7)
-                            .fixedSize(horizontal: false, vertical: true)
-                            .padding(.top, 8).padding(.bottom, 4)
-                            .modifier(ShoppingEntrance())
-                            .accessibilityIdentifier("shopping.detail.title")
-                            .accessibilityAddTraits(.isHeader)
+                        VStack(alignment: .leading, spacing: 16) {
+                            Text(list.title)
+                                .font(.system(.largeTitle, design: .default, weight: .semibold))
+                                .tracking(-0.7)
+                                .fixedSize(horizontal: false, vertical: true)
+                                .accessibilityIdentifier("shopping.detail.title")
+                                .accessibilityAddTraits(.isHeader)
+                            if !list.recipes.isEmpty {
+                                ScrollView(.horizontal) {
+                                    HStack(spacing: 8) {
+                                        ForEach(list.recipes) { recipe in
+                                            Button { reference = recipe } label: {
+                                                Text(recipe.displayLabel)
+                                                    .font(.subheadline)
+                                                    .padding(.horizontal, 14).padding(.vertical, 10)
+                                                    .background(.white, in: .capsule)
+                                            }
+                                            .buttonStyle(ShoppingBubbleButtonStyle())
+                                            .accessibilityLabel(recipe.label)
+                                            .accessibilityIdentifier("shopping.source.\(recipe.recipeID)")
+                                        }
+                                    }
+                                }
+                                .scrollIndicators(.hidden)
+                            }
+                        }
+                        .padding(.top, 8).padding(.bottom, 4)
+                        .modifier(ShoppingEntrance())
                     }
                     .listRowInsets(EdgeInsets(top: 0, leading: 4, bottom: 0, trailing: 4))
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
-                    if list.items.contains(where: { !isInBasket($0) }) {
-                        Section {
-                            ForEach(list.items.filter { !isInBasket($0) }) { item in
-                                row(item, showSource: multipleSources)
+                    ForEach(ShoppingAisle.allCases) { aisle in
+                        let items = list.items.filter { !isInBasket($0) && $0.aisle == aisle }
+                        if !items.isEmpty {
+                            Section {
+                                ForEach(items) { item in row(item, showSource: multipleSources) }
+                            } header: {
+                                Text(aisle.title)
+                                    .font(.subheadline.weight(.medium))
+                                    .textCase(nil)
+                                    .foregroundStyle(ShoppingStyle.muted)
+                                    .accessibilityIdentifier("shopping.aisle.\(aisle.rawValue)")
                             }
                         }
                     }
@@ -246,9 +286,21 @@ struct ShoppingListDetailView: View {
                     }
                     ToolbarItem(placement: .topBarTrailing) {
                         Menu {
+                            Button("Ajouter une recette", systemImage: "book.closed") { addingRecipe = true }
+                                .accessibilityIdentifier("shopping.recipe.add")
+                            Button("Dupliquer", systemImage: "plus.square.on.square") {
+                                if let id = shopping.duplicate(listID) { shopping.requestedListID = id }
+                            }
+                            .accessibilityIdentifier("shopping.duplicate")
+                            Button("Enregistrer comme modèle", systemImage: "bookmark") {
+                                templateName = list.title; savingTemplate = true
+                            }
+                            .disabled(list.items.isEmpty)
+                            .accessibilityIdentifier("shopping.template.save")
                             Button("Renommer", systemImage: "pencil") { title = list.title; renaming = true }
                             Button("Supprimer la liste", systemImage: "trash", role: .destructive) { deleting = true }
                         } label: { Label("Options de la liste", systemImage: "ellipsis") }
+                        .accessibilityIdentifier("shopping.options")
                     }
                 }
             } else { ContentUnavailableView("Liste introuvable", systemImage: "checklist") }
@@ -259,6 +311,20 @@ struct ShoppingListDetailView: View {
         .tint(ShoppingStyle.ink)
         .navigationBarTitleDisplayMode(.inline)
         .sensoryFeedback(.selection, trigger: checks) { _, _ in hapticsEnabled }
+        .sheet(isPresented: $addingRecipe) {
+            ShoppingRecipePicker(listID: listID) { addingRecipe = false }
+        }
+        .sheet(item: $reference) { recipe in
+            if let list = shopping.list(listID) { ShoppingRecipeSnapshot(list: list, recipe: recipe) }
+        }
+        .alert("Enregistrer un modèle", isPresented: $savingTemplate) {
+            TextField("Nom du modèle", text: $templateName)
+            Button("Enregistrer") { shopping.saveTemplate(from: listID, title: templateName); savedTemplate = true }
+            Button("Annuler", role: .cancel) {}
+        } message: { Text("Tu pourras réutiliser ces articles avec toutes les cases décochées.") }
+        .alert("Modèle enregistré", isPresented: $savedTemplate) {
+            Button("OK", role: .cancel) {}
+        } message: { Text("Retrouve-le avec le bouton Modèles sur l’accueil des listes.") }
         .alert("Ajouter un article", isPresented: $adding) {
             TextField("Article", text: $name)
             TextField("Quantité (facultatif)", text: $amount)
@@ -290,7 +356,7 @@ struct ShoppingListDetailView: View {
         Task { @MainActor in
             do { try await Task.sleep(for: .milliseconds(220)) } catch { return }
             guard pendingMoves[item.id] != nil else { return }
-            withAnimation(.easeInOut(duration: 0.25)) { pendingMoves.removeValue(forKey: item.id) }
+            withAnimation(.easeInOut(duration: 0.25)) { _ = pendingMoves.removeValue(forKey: item.id) }
         }
     }
 
@@ -304,7 +370,7 @@ struct ShoppingListDetailView: View {
                         .strikethrough(item.isChecked, color: ShoppingStyle.muted.opacity(0.5))
                         .foregroundStyle(item.isChecked ? ShoppingStyle.muted : ShoppingStyle.ink)
                         .fixedSize(horizontal: false, vertical: true)
-                    if showSource, let source = item.source {
+                    if showSource || item.contributions == nil, let source = item.sourceSummary {
                         Text(source).font(.system(.caption2, design: .default)).foregroundStyle(ShoppingStyle.muted)
                     }
                 }
@@ -328,6 +394,20 @@ struct ShoppingListDetailView: View {
         .listRowBackground(Color.white)
         .accessibilityValue(item.isChecked ? "Dans le panier" : "À acheter")
         .accessibilityIdentifier("shopping.item.\(item.id)")
+        .contextMenu {
+            Menu("Changer de rayon", systemImage: "square.grid.2x2") {
+                ForEach(ShoppingAisle.allCases) { aisle in
+                    Button {
+                        withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.25)) {
+                            shopping.setAisle(aisle, for: item.id, in: listID)
+                        }
+                    } label: {
+                        if item.aisle == aisle { Label(aisle.title, systemImage: "checkmark") }
+                        else { Text(aisle.title) }
+                    }
+                }
+            }
+        }
         .swipeActions {
             Button("Supprimer", role: .destructive) { shopping.removeItem(item.id, from: listID) }
         }

@@ -91,6 +91,87 @@ final class Petit_ChefUITests: XCTestCase {
     }
 
     @MainActor
+    func testShoppingAislesRecipePortionsAndReusableTemplate() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing", "-reset-cooking"]
+        app.launch()
+        app.tabBars.buttons["Listes"].tap()
+        app.buttons["shopping.create"].tap()
+        let create = app.alerts["Nouvelle liste"]
+        XCTAssertTrue(create.waitForExistence(timeout: 4))
+        create.textFields.firstMatch.tap()
+        create.textFields.firstMatch.typeText("Semaine")
+        create.buttons["Créer"].tap()
+
+        app.buttons["shopping.options"].tap()
+        app.buttons["shopping.recipe.add"].tap()
+        app.buttons["shopping.recipe.burger-and-oven-fries"].tap()
+        let stepper = app.steppers["shopping.export.servings"]
+        XCTAssertTrue(stepper.waitForExistence(timeout: 5))
+        stepper.buttons.element(boundBy: 1).tap()
+        stepper.buttons.element(boundBy: 1).tap()
+        XCTAssertTrue(app.staticTexts["4 personnes"].exists)
+        screenshot(app, "Features — Export portions")
+        app.buttons["shopping.export.add"].tap()
+        let burger = app.buttons["shopping.source.burger-and-oven-fries"]
+        XCTAssertTrue(burger.waitForExistence(timeout: 5))
+        XCTAssertTrue(burger.label.contains("4 pers."))
+        XCTAssertTrue(app.staticTexts["shopping.aisle.produce"].exists)
+        burger.tap()
+        XCTAssertTrue(app.staticTexts["Pour 4 personnes"].waitForExistence(timeout: 5))
+        screenshot(app, "Features — Recipe snapshot")
+        app.buttons["Fermer"].tap()
+
+        app.buttons["shopping.options"].tap()
+        app.buttons["shopping.recipe.add"].tap()
+        app.buttons["shopping.recipe.tomato-mozzarella-toast"].tap()
+        XCTAssertTrue(app.buttons["shopping.export.add"].waitForExistence(timeout: 5))
+        app.steppers["shopping.export.servings"].buttons.element(boundBy: 1).tap()
+        app.buttons["shopping.export.add"].tap()
+        XCTAssertTrue(app.buttons["shopping.source.tomato-mozzarella-toast"].waitForExistence(timeout: 5))
+        let tomatoPredicate = NSPredicate(format: "identifier BEGINSWITH %@ AND label BEGINSWITH %@", "shopping.item.", "Tomate")
+        let tomato = app.buttons.matching(tomatoPredicate).firstMatch
+        XCTAssertTrue(tomato.waitForExistence(timeout: 5))
+        XCTAssertEqual(app.buttons.matching(tomatoPredicate).count, 1)
+        XCTAssertTrue(tomato.label.contains("5"))
+        screenshot(app, "Features — Aisles and recipes")
+        tomato.press(forDuration: 1.2)
+        app.buttons["Changer de rayon"].tap()
+        app.buttons["Épicerie"].tap()
+        for _ in 0..<8 where !tomato.isHittable { app.swipeUp() }
+        XCTAssertTrue(tomato.isHittable)
+        tomato.tap()
+        app.buttons["shopping.options"].tap()
+        app.buttons["shopping.template.save"].tap()
+        let save = app.alerts["Enregistrer un modèle"]
+        XCTAssertTrue(save.waitForExistence(timeout: 4))
+        save.buttons["Enregistrer"].tap()
+        let saved = app.alerts["Modèle enregistré"]
+        XCTAssertTrue(saved.waitForExistence(timeout: 4))
+        saved.buttons["OK"].tap()
+        app.navigationBars.buttons.element(boundBy: 0).tap()
+        app.buttons["shopping.templates"].tap()
+        let templatePredicate = NSPredicate(format: "identifier BEGINSWITH %@", "shopping.template.")
+        let template = app.buttons.matching(templatePredicate).firstMatch
+        XCTAssertTrue(template.waitForExistence(timeout: 5))
+        screenshot(app, "Features — Templates")
+        template.tap()
+        XCTAssertTrue(app.staticTexts["shopping.detail.title"].waitForExistence(timeout: 5))
+        let reused = app.buttons.matching(tomatoPredicate).firstMatch
+        for _ in 0..<8 where !reused.isHittable { app.swipeUp() }
+        XCTAssertEqual(reused.value as? String, "À acheter")
+        screenshot(app, "Features — Reused list")
+        app.terminate()
+        app.launchArguments = ["-ui-testing"]
+        app.launch()
+        app.tabBars.buttons["Listes"].tap()
+        let lists = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "shopping.list."))
+        XCTAssertEqual(lists.count, 2)
+        app.buttons["shopping.templates"].tap()
+        XCTAssertTrue(app.buttons.matching(templatePredicate).firstMatch.waitForExistence(timeout: 5))
+    }
+
+    @MainActor
     func testCustomRecipeAndFlexibleCookingSurviveRelaunch() throws {
         let app = XCUIApplication()
         app.launchArguments = ["-ui-testing", "-reset-cooking"]
