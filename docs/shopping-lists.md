@@ -10,7 +10,7 @@ Le partage est du texte avec les quantités, les recettes d’origine et l’ét
 
 ## Interface et mouvement
 
-L’accueil affiche le titre « Listes » et une bulle blanche arrondie par liste, sur un fond gris très clair. Chaque bulle contient uniquement le nom et un chevron discret. Aucun compteur ni aperçu d’ingrédients. Le bouton de création reste dans la barre supérieure.
+L’accueil affiche le titre « Listes » et une bulle blanche arrondie par liste, sur un fond gris très clair. Les bulles ont une hauteur minimale de 92 points, un rayon de 30 points et un espacement de 16 points. Le nom en taille titre 3 et une ombre très douce leur donnent une présence discrète ; chaque bulle contient uniquement le nom et un chevron. Aucun compteur ni aperçu d’ingrédients. Le bouton de création reste dans la barre supérieure.
 
 Le détail regroupe les ingrédients dans des panneaux blancs arrondis : cases circulaires, quantités alignées à droite et séparateurs fins. Les achats cochés rejoignent un panneau « Dans le panier ». L’ajout d’article reste accessible dans une capsule de verre en bas ; partage et options utilisent les contrôles natifs. La provenance d’un article n’est affichée que si plusieurs recettes alimentent la liste.
 

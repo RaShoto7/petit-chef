@@ -40,12 +40,13 @@ struct ShoppingListsView: View {
                         .frame(maxWidth: .infinity)
                         .background(.white, in: .rect(cornerRadius: 28))
                     } else {
-                        LazyVStack(spacing: 12) {
+                        LazyVStack(spacing: 16) {
                             ForEach(Array(shopping.lists.enumerated()), id: \.element.id) { index, list in
                                 NavigationLink(value: list.id) {
                                     HStack(spacing: 20) {
                                         Text(list.title)
-                                            .font(.system(.body, design: .default, weight: .medium))
+                                            .font(.system(.title3, design: .default, weight: .medium))
+                                            .tracking(-0.3)
                                             .fixedSize(horizontal: false, vertical: true)
                                         Spacer(minLength: 0)
                                         Image(systemName: "chevron.right")
@@ -53,11 +54,12 @@ struct ShoppingListsView: View {
                                             .foregroundStyle(ShoppingStyle.muted.opacity(0.65))
                                             .accessibilityHidden(true)
                                     }
-                                    .padding(.horizontal, 24)
-                                    .padding(.vertical, 26)
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                    .background(.white, in: .rect(cornerRadius: 26))
-                                    .contentShape(.rect(cornerRadius: 26))
+                                    .padding(.horizontal, 26)
+                                    .padding(.vertical, 28)
+                                    .frame(maxWidth: .infinity, minHeight: 92, alignment: .leading)
+                                    .background(.white, in: .rect(cornerRadius: 30))
+                                    .shadow(color: .black.opacity(0.025), radius: 12, x: 0, y: 4)
+                                    .contentShape(.rect(cornerRadius: 30))
                                 }
                                 .buttonStyle(ShoppingBubbleButtonStyle())
                                 .modifier(ShoppingEntrance(delay: min(Double(index) * 0.025, 0.1)))
