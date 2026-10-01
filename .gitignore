@@ -4,6 +4,7 @@ build/
 *.xcresult
 xcuserdata/
 *.xcuserstate
+__pycache__/
 
 # Local configuration and signing material
 .env

@@ -2,6 +2,34 @@ import SwiftUI
 import AVFoundation
 import UIKit
 
+/// One local movie per toast step. Timing describes media, never recipe cooking.
+enum AuthoredToastScene: String, CaseIterable, Sendable {
+    case preheat = "preheat-toast"
+    case cutting = "slice-tomatoes"
+    case building = "build-toast"
+    case baking = "bake-toast"
+    case seasoning = "dress-tomatoes"
+    case plating = "serve-toast"
+
+    var movieName: String {
+        switch self {
+        case .preheat: "toast-preheat"
+        case .cutting: "toast-cutting"
+        case .building: "toast-building"
+        case .baking: "toast-baking"
+        case .seasoning: "toast-seasoning"
+        case .plating: "toast-plating"
+        }
+    }
+
+    var duration: Double {
+        switch self {
+        case .cutting, .building, .seasoning: 8
+        case .preheat, .baking, .plating: 6
+        }
+    }
+}
+
 /// A scene authored and rendered in Blender; native playback preserves its alpha.
 /// It illustrates the gesture without advancing any step or changing a timer.
 struct AuthoredCookingAnimation: View {

@@ -184,23 +184,23 @@ final class Petit_ChefUITests: XCTestCase {
         XCTAssertFalse(app.buttons["cooking.overview"].exists)
         XCTAssertFalse(app.buttons["cooking.replay"].exists)
         Thread.sleep(forTimeInterval: 3) // Capture the gesture after arrival.
-        screenshot(app, "T03 — Four croquis")
+        screenshot(app, "T03 — Préchauffage Blender")
         next(app, "Découper les ingrédients")
         Thread.sleep(forTimeInterval: 5) // Capture the gesture after arrival.
-        screenshot(app, "T04 — Découpe croquis")
+        screenshot(app, "T04 — Découpe Blender")
         app.buttons["cooking.previous"].tap()
         assertStep(app, "Préchauffer le four")
         XCTAssertFalse(app.buttons["cooking.previous"].exists)
         next(app, "Découper les ingrédients")
         next(app, "Garnir le pain")
         Thread.sleep(forTimeInterval: 8) // Capture the gesture after arrival.
-        screenshot(app, "T05 — Garniture croquis")
+        screenshot(app, "T05 — Garniture Blender")
         next(app, "Gratiner les tartines")
         Thread.sleep(forTimeInterval: 7) // Capture the gesture after arrival.
-        screenshot(app, "T06 — Gratin croquis")
+        screenshot(app, "T06 — Gratinage Blender")
         next(app, "Assaisonner les tomates")
         Thread.sleep(forTimeInterval: 4) // Capture the gesture after arrival.
-        screenshot(app, "T07 — Mélange croquis")
+        screenshot(app, "T07 — Mélange Blender")
         let timer = app.buttons["cooking.timer.edit"]
         XCTAssertTrue(timer.isHittable)
         XCTAssertGreaterThan(timer.frame.midY, app.staticTexts["cooking.step.title"].frame.maxY)
@@ -210,7 +210,7 @@ final class Petit_ChefUITests: XCTestCase {
         XCTAssertFalse(app.buttons["cooking.timer.stop"].exists)
         next(app, "Servir les tartines")
         Thread.sleep(forTimeInterval: 7) // Capture the gesture after arrival.
-        screenshot(app, "T08 — Dressage croquis")
+        screenshot(app, "T08 — Dressage Blender")
         XCTAssertFalse(app.buttons["cooking.skip"].exists)
         app.buttons["cooking.next"].tap()
         XCTAssertTrue(app.buttons["cooking.finish"].waitForExistence(timeout: 5))

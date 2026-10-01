@@ -18,7 +18,7 @@ Prérequis : **Xcode 27**, **iOS 27 Simulator** et **Metal Toolchain**. Le scrip
 
 ## Direction visuelle : tartines
 
-Accueil en Fraunces Italic embarquée, titres de recette en serif, cartes Liquid Glass transparentes aux contours fermés, minuteur ancré en bas et sections au dépliage stable. Les préparations des tartines utilisent des croquis vectoriels animés ; le dressage teste une nouvelle scène réalisée en 3D dans Blender et lue en vidéo transparente. [Pilote et recherche de frameworks](docs/design/animation-pilot/README.md). Chaque transition sépare le départ, une courte respiration et l’arrivée ; le geste commence ensuite. Les commandes inutiles disparaissent au début et à la fin ; **Terminer** revient directement à l’accueil. [Choix de rendu et limites](docs/design/tartines-premium.md).
+Accueil en Fraunces Italic embarquée, titres de recette en serif, cartes Liquid Glass transparentes aux contours fermés, minuteur ancré en bas et sections au dépliage stable. Les six étapes des tartines utilisent des scènes réalisées en 3D dans Blender, puis lues localement en vidéo transparente. [Pilote et recherche de frameworks](docs/design/animation-pilot/README.md). Chaque transition sépare le départ, une courte respiration et l’arrivée ; le geste commence ensuite. Les commandes inutiles disparaissent au début et à la fin ; **Terminer** revient directement à l’accueil. [Choix de rendu et limites](docs/design/tartines-premium.md).
 
 ## Version 0.4
 
@@ -54,14 +54,14 @@ Si la signature signale « resource fork / Finder information », placer Derived
 - `Cooking/CookingAlarms.swift` : autorisation et programmation AlarmKit, inventaire local des alarmes appartenant aux sessions de l’app. Une alarme arrêtée dans l’interface système n’est pas recréée sans modification explicite de sa durée et ne marque pas automatiquement un aliment comme cuit.
 - `Shared/` : métadonnées AlarmKit et App Intent communs à l’app et à l’extension.
 - `CookingWidgets/` : présentation du compte à rebours en activité en direct, Dynamic Island compacte, étendue et minimale.
-- `Illustrations/` : illustrations du catalogue, gestes dessinés en Canvas, dont six scènes détaillées pour les tartines (60 images/s demandées, 30 en économie d’énergie pour Canvas). Réduire les animations affiche une pose fixe. `Shaders/` : révélation au pinceau, grain fixe et chaleur en Metal.
+- `Illustrations/` : illustrations du catalogue, gestes dessinés en Canvas, et six scènes Blender pour les tartines (vidéos HEVC avec alpha, 24 images/s). Les autres gestes en Canvas visent 60 images/s, ou 30 en économie d’énergie. Réduire les animations affiche une pose fixe. `Shaders/` : révélation au pinceau, grain fixe et chaleur en Metal.
 - `Features/` : accueil, fiche, éditeur d’ingrédients, cuisine et paramètres.
 
 Les préférences d’ingrédients ne modifient pas une session déjà commencée. Elles ne réécrivent pas non plus les instructions culinaires. Les durées et températures ne sont pas multipliées avec les portions. Les allergènes restent une information de référence à vérifier après toute substitution.
 
 ## Vérification
 
-La suite comprend 23 tests unitaires et 4 parcours UI (personnalisation/navigation/reprise, ajout/suppression, illustrations et tartines). Pour le pilote Blender et Fraunces, les 23 tests unitaires et le parcours UI tartines ont été vérifiés sur iPhone 18 Pro Simulator, iOS 27. Le parcours burger a été vérifié lors de l’itération précédente. Les tests UI ordinaires utilisent un stockage séparé et des notifications locales désactivées. Le test `testSystemTimerAuthorizationAndBackground` exerce séparément AlarmKit réel, avec son autorisation système, puis annule le minuteur. Ce contrôle a été ignoré explicitement sur ce simulateur : AlarmKit refuse l’autorisation, y compris après compilation signée localement. L’affichage réel de la Dynamic Island n’est donc pas encore validé.
+La suite comprend 24 tests unitaires et 4 parcours UI (personnalisation/navigation/reprise, ajout/suppression, illustrations et tartines). Pour les six scènes Blender et Fraunces, les 24 tests unitaires et les quatre parcours UI ont été vérifiés sur Petit Chef Croquis (iPhone 18 Pro Simulator, iOS 27). Le contrôle des ressources exécute six variantes pour vérifier chaque vidéo. [Captures des six étapes des tartines](docs/screenshots/tartines-blender/overview.jpg). Les tests UI ordinaires utilisent un stockage séparé et des notifications locales désactivées. Le test `testSystemTimerAuthorizationAndBackground` exerce séparément AlarmKit réel, avec son autorisation système, puis annule le minuteur. Ce contrôle a été ignoré explicitement sur ce simulateur : AlarmKit refuse l’autorisation, y compris après compilation signée localement. L’affichage réel de la Dynamic Island n’est donc pas encore validé.
 
 ```sh
 xcodebuild -project 'Petit Chef.xcodeproj' -scheme 'Petit Chef' \

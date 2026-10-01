@@ -14,22 +14,22 @@ L’entrée en cuisine utilise la transition native `crossFade` d’iOS 27, suiv
 
 Le minuteur reste ancré en bas, au-dessus de la navigation, dans une carte Liquid Glass transparente avec des chiffres de 27 points. La croix du minuteur l’arrête immédiatement. Toucher le chrono permet toujours de régler sa durée. Le bouton final **Terminer**, agrandi et sans icône, revient à la grille ; les commandes de navigation disparaissent à la fin.
 
-## Croquis animés
+## Scènes animées
 
-`ToastSketchAnimation` dessine les scènes de préparation avec SwiftUI Canvas : four, découpe, garniture, cuisson, mélange et dressage. Contours légèrement doublés, hachures fixes, couleurs en lavis, mie et nervures donnent un rendu de carnet culinaire. Le shader Metal ajoute un grain stable. Aucun modèle ni asset distant n’est nécessaire.
+Les six étapes utilisent désormais `AuthoredCookingAnimation`, avec des objets créés et animés dans Blender. Les vidéos locales en HEVC avec alpha conservent le fond transparent et le rendu dessiné du dressage : teintes étagées, contours, alvéoles de mie et nervures du basilic. La caméra orthographique reste fixe et les scènes sources `.blend` sont conservées pour retoucher les poses.
 
-Les mouvements sont décomposés : levée du couteau, coupe et dégagement ; frottement de l’ail, filet d’huile, pose du fromage ; insertion du plateau puis fermeture du four ; rotation des ingrédients dans le saladier ; dépôt des tomates et du basilic. La découpe conserve les graines et la peau dans chaque morceau : les fragments se séparent après le contact de la lame. Le couteau bascule autour de sa pointe, la porte du four est projetée autour de sa charnière et les ombres restent sur la surface pendant la descente des ingrédients. Le mélange ralentit progressivement et déplace davantage les morceaux proches de la cuillère.
+Préchauffage : four vide et fermé, rotation du thermostat vers la graduation 180 °C, allumage du voyant et de la résistance. Découpe : le couteau touche la planche avant la séparation des dés, puis tranche la mozzarella et sépare l’ail. Garniture : pain sur la même plaque qu’à l’enfournement, frottement de la face coupée de l’ail, filet d’huile relié au goulot et pose du fromage. Gratinage : ouverture de la porte sur sa charnière, insertion de la plaque et fermeture. Assaisonnement : huile, basilic, sel et poivre puis mélange progressif ; la cuillère revient sur le plan de travail. Le dressage commence avec le pain et le fromage déjà gratinés, puis ajoute uniquement les tomates et le basilic.
 
-Chaque séquence conserve sa pose finale avant un fondu de boucle. Les gestes illustrent l’action sans piloter le moteur de cuisson ni les minuteurs.
+Les séquences durent 6 ou 8 secondes à 24 images/s, puis gardent leur pose finale. Elles illustrent les gestes sans accélérer ni déclencher les vrais minuteurs. La lecture commence après l’arrivée de la carte, se suspend pendant les transitions et quand l’app est inactive. Revenir à une étape recrée sa scène depuis le début. Réduire les animations affiche une image finale fixe ; les déplacements de l’interface sont également supprimés.
 
-Les mises à jour visent 60 images/s, ou 30 en économie d’énergie, et sont suspendues pendant les transitions et lorsque l’app est inactive. Réduire les animations affiche une pose fixe et supprime les déplacements de l’interface. La qualité de fluidité, la consommation et la chauffe sur iPhone physique restent à mesurer.
+Le moteur de cuisson, les durées et les ingrédients restent indépendants des scènes. Aucun modèle ni asset distant n’est chargé par l’app. La fluidité, la consommation et la chauffe sur iPhone physique restent à mesurer.
 
 ## Vérification
 
-Les cinq premières étapes restent des croquis 2D avec perspective et relief. Le dressage utilise désormais un pilote préparé en 3D dans Blender, puis lu localement en vidéo transparente. [Recherche, compromis et sources](animation-pilot/README.md). Le choix conserve la direction dessinée demandée et le contrôle des contours. Sources Apple consultées : [Canvas](https://developer.apple.com/documentation/swiftui/canvas), [Liquid Glass](https://developer.apple.com/documentation/swiftui/applying-liquid-glass-to-custom-views), [transition CrossFade](https://developer.apple.com/documentation/swiftui/crossfadenavigationtransition).
+Les six étapes utilisent des scènes préparées en 3D dans Blender, puis lues localement en vidéo transparente. [Recherche, compromis et sources](animation-pilot/README.md). Le choix conserve la direction dessinée demandée et le contrôle des contours. Sources Apple consultées : [Canvas](https://developer.apple.com/documentation/swiftui/canvas), [Liquid Glass](https://developer.apple.com/documentation/swiftui/applying-liquid-glass-to-custom-views), [transition CrossFade](https://developer.apple.com/documentation/swiftui/crossfadenavigationtransition).
 
 Le parcours UI des tartines ouvre et ferme chaque section trois fois, traverse les six étapes, revient en arrière, arrête le minuteur en un tap et vérifie le retour à l’accueil. Le parcours burger vérifie aussi la consultation d’une étape sans validation, le réglage manuel du chrono et la reprise après relancement.
 
-<img src="../screenshots/tartines-premium/home.png" alt="Accueil" width="240"> <img src="../screenshots/tartines-premium/recipe.png" alt="Tartines" width="240"> <img src="../screenshots/tartines-premium/preparation.png" alt="Croquis de découpe" width="240">
+<img src="../screenshots/tartines-blender/home.png" alt="Accueil" width="240"> <img src="../screenshots/tartines-blender/recipe.png" alt="Tartines" width="240"> <img src="../screenshots/tartines-blender/cutting.png" alt="Découpe Blender" width="240">
 
 Les alarmes système réelles et la Dynamic Island nécessitent toujours une vérification sur un iPhone signé ; les tests UI ordinaires isolent leurs données et ne programment pas d’alarmes système.
