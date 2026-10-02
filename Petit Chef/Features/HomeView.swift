@@ -3,25 +3,25 @@ import SwiftUI
 struct HomeView: View {
     @Environment(CookingStore.self) private var cooking
     @Binding var showCooking: Bool
+    @Binding var path: [String]
     var openSettings: () -> Void
+    @ScaledMetric(relativeTo: .largeTitle) private var headingSize = 42
     @Namespace private var recipeTransition
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $path) {
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
                     Text("mes recettes.")
-                        .font(.system(size: 38, weight: .semibold, design: .rounded))
-                        .tracking(-1.6)
+                        .font(.custom("FrauncesPetitChef-Italic", fixedSize: headingSize))
+                        .fontDesign(nil)
+                        .tracking(-1.1)
                         .accessibilityAddTraits(.isHeader)
                         .accessibilityIdentifier("home.title")
                     if cooking.hasActiveSession { resumeCard }
                     LazyVGrid(columns: [GridItem(.flexible(), spacing: 14), GridItem(.flexible(), spacing: 14)], alignment: .leading, spacing: 18) {
                         ForEach(RecipeCatalog.recipes) { recipe in
-                            NavigationLink {
-                                RecipeDetailView(recipe: recipe, showCooking: $showCooking)
-                                    .navigationTransition(.zoom(sourceID: recipe.id, in: recipeTransition))
-                            } label: {
+                            NavigationLink(value: recipe.id) {
                                 VStack(alignment: .leading, spacing: 10) {
                                     RecipeArtwork(recipeID: recipe.id)
                                         .aspectRatio(1, contentMode: .fit)
@@ -57,6 +57,12 @@ struct HomeView: View {
                     Button("Profil et réglages", systemImage: "person.crop.circle", action: openSettings)
                         .labelStyle(.iconOnly)
                         .accessibilityIdentifier("home.account")
+                }
+            }
+            .navigationDestination(for: String.self) { id in
+                if let recipe = RecipeCatalog.recipes.first(where: { $0.id == id }) {
+                    RecipeDetailView(recipe: recipe, showCooking: $showCooking)
+                        .navigationTransition(.zoom(sourceID: recipe.id, in: recipeTransition))
                 }
             }
             .chefScreen()

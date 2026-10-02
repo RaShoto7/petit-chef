@@ -4,4 +4,5 @@
 <key>NSAlarmKitUsageDescription</key><string>Petit Chef affiche vos minuteurs de cuisson sur l’écran verrouillé et dans la Dynamic Island, et vous avertit à la fin.</string>
 <key>NSSupportsLiveActivities</key><true/>
 <key>CFBundleURLTypes</key><array><dict><key>CFBundleURLSchemes</key><array><string>petitchef</string></array></dict></array>
+<key>UIAppFonts</key><array><string>FrauncesPetitChef-Italic.ttf</string></array>
 </dict></plist>

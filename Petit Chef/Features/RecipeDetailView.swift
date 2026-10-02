@@ -17,6 +17,9 @@ struct RecipeDetailView: View {
         ScrollView {
             VStack(spacing: 24) {
                 introduction
+                if recipe.id == "lemon-pasta" {
+                    LemonPastaNutritionCard(recipe: adjusted)
+                }
                 ingredients
                 details
             }
@@ -68,10 +71,13 @@ struct RecipeDetailView: View {
     private var introduction: some View {
         VStack(alignment: .leading, spacing: 18) {
             RecipeArtwork(recipeID: recipe.id)
-                .frame(height: 220)
+                .frame(height: recipe.id == "lemon-pasta" ? 180 : 220)
                 .frame(maxWidth: .infinity)
             Text(recipe.title)
-                .font(.system(.largeTitle, design: .rounded, weight: .bold))
+                .font(DesignSystem.Typography.title)
+                .fontDesign(.serif)
+                .italic()
+                .tracking(-0.8)
                 .accessibilityIdentifier("recipe.title")
                 .accessibilityAddTraits(.isHeader)
             HStack {
@@ -130,7 +136,7 @@ struct RecipeDetailView: View {
         VStack(spacing: 18) {
             ChefCard {
                 VStack(alignment: .leading, spacing: 20) {
-                    DisclosureGroup {
+                    RecipeDisclosure(title: "\(recipe.steps.count) étapes", identifier: "steps") {
                         VStack(alignment: .leading, spacing: 16) {
                             ForEach(Array(recipe.steps.enumerated()), id: \.element.id) { index, step in
                                 HStack(alignment: .top, spacing: 12) {
@@ -139,13 +145,13 @@ struct RecipeDetailView: View {
                                 }
                             }
                         }.padding(.top, 16)
-                    } label: { Text("\(recipe.steps.count) étapes").font(DesignSystem.Typography.label) }
+                    }
                     Divider()
-                    DisclosureGroup {
+                    RecipeDisclosure(title: "Matériel", identifier: "equipment") {
                         VStack(alignment: .leading, spacing: 12) {
                             ForEach(recipe.equipment, id: \.self) { Text($0).font(.subheadline) }
                         }.padding(.top, 12)
-                    } label: { Text("Matériel").font(DesignSystem.Typography.label) }
+                    }
                 }.padding(20)
             }
             ChefCard {
@@ -168,6 +174,47 @@ struct RecipeDetailView: View {
                 }.padding(20)
             }
 
+        }
+    }
+}
+
+/// Keep the content and glass surface mounted while changing only the clipping height.
+/// This avoids replacing the material during the disclosure's layout animation.
+private struct RecipeDisclosure<Content: View>: View {
+    let title: String
+    let identifier: String
+    @ViewBuilder var content: Content
+    @State private var expanded = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Button {
+                withAnimation(reduceMotion ? nil : .smooth(duration: 0.36)) {
+                    expanded.toggle()
+                }
+            } label: {
+                HStack {
+                    Text(title).font(DesignSystem.Typography.label)
+                    Spacer()
+                    Image(systemName: "chevron.down")
+                        .font(.system(size: 12, weight: .semibold))
+                        .rotationEffect(.degrees(expanded ? 180 : 0))
+                        .foregroundStyle(.secondary)
+                }
+                .frame(minHeight: 44)
+                .contentShape(.rect)
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("recipe.disclosure.\(identifier)")
+            .accessibilityValue(expanded ? "Déplié" : "Replié")
+            content
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .frame(height: expanded ? nil : 0, alignment: .top)
+                .clipped()
+                .opacity(expanded ? 1 : 0)
+                .accessibilityHidden(!expanded)
+                .allowsHitTesting(expanded)
         }
     }
 }

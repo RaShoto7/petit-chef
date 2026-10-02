@@ -43,18 +43,6 @@ struct AnimatedCookingIllustration: View {
             }
             .accessibilityHidden(true)
         }
-        .overlay(alignment: .bottomTrailing) {
-            if !reduceMotion {
-                Button { startDate = .now } label: {
-                    Image(systemName: "arrow.counterclockwise")
-                        .font(.system(size: 12, weight: .medium)).foregroundStyle(.secondary)
-                        .frame(width: 44, height: 44).contentShape(.circle)
-                }
-                .buttonStyle(TactileButtonStyle())
-                .accessibilityLabel("Revoir le geste")
-                .accessibilityIdentifier("cooking.replay")
-            }
-        }
         .onChange(of: stepID) { _, _ in startDate = .now }
         .onChange(of: scenePhase) { _, phase in if phase == .active { startDate = .now } }
     }
