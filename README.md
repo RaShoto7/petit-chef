@@ -20,9 +20,13 @@ Prérequis : **Xcode 27**, **iOS 27 Simulator** et **Metal Toolchain**. Le scrip
 
 Accueil en italique sans empattements, titres de recette en serif, cartes Liquid Glass transparentes et sections au dépliage stable. Les six préparations des tartines utilisent des croquis vectoriels animés. Chaque transition sépare le départ, une courte respiration et l’arrivée ; le geste commence ensuite. Les commandes inutiles disparaissent au début et à la fin ; **Terminer** revient directement à l’accueil. [Choix de rendu et limites](docs/design/tartines-premium.md).
 
+## Listes de courses
+
+Deux onglets **Recettes** et **Listes**. Depuis une recette, exporter les ingrédients ajustés vers une nouvelle liste ou une liste existante, en excluant ce qui est déjà à la maison. Les achats sont cochables, sauvegardés localement et partageables ; des articles libres peuvent être ajoutés. [Fonctionnement et choix de données](docs/shopping-lists.md).
+
 ## Version 0.4
 
-- **mes recettes.** : grille de deux cartes par ligne, fond blanc, illustrations originales en croquis et touches de pinceau diagonales. Le profil est le seul accès aux réglages ; aucune barre d’onglets.
+- **mes recettes.** : grille de deux cartes par ligne, fond blanc, illustrations originales en croquis et touches de pinceau diagonales. Le profil est le seul accès aux réglages.
 - **Fiche** : bouton compact « C’est parti », quantités pour 1 à 12 personnes, ingrédients modifiables un par un (nom, quantité, unité, ajout, suppression), annuler/rétablir, matériel et allergènes avec pictogrammes dessinés. Les références restent dans la documentation.
 - **Étapes** : texte neutre, gestes animés correspondant à l’action, navigation précédente/suivante et sommaire. Consulter une étape n’effectue aucune action et ne relance aucun minuteur.
 - **Liberté de préparation** : une étape peut être effectuée en avance après confirmation de ses prérequis manquants. Le moteur mémorise cette décision. Une cuisson peut être raccourcie, prolongée, réglée directement en heures/minutes/secondes en touchant le chrono, ou arrêtée en un tap sur la croix, sans confirmation supplémentaire.
@@ -56,12 +60,15 @@ Si la signature signale « resource fork / Finder information », placer Derived
 - `CookingWidgets/` : présentation du compte à rebours en activité en direct, Dynamic Island compacte, étendue et minimale.
 - `Illustrations/` : illustrations du catalogue, gestes dessinés en Canvas, dont six scènes détaillées pour les tartines (60 images/s demandées, 30 en économie d’énergie pour Canvas). Réduire les animations affiche une pose fixe. `Shaders/` : révélation au pinceau, grain fixe et chaleur en Metal.
 - `Features/` : accueil, fiche, éditeur d’ingrédients, cuisine et paramètres.
+- `Shopping/` : listes persistantes par rayon, ingrédients regroupés avec références aux recettes, portions à l’export, modèles réutilisables, suivi des achats et partage texte.
 
 Les préférences d’ingrédients ne modifient pas une session déjà commencée. Elles ne réécrivent pas non plus les instructions culinaires. Les durées et températures ne sont pas multipliées avec les portions. Les allergènes restent une information de référence à vérifier après toute substitution.
 
 ## Vérification
 
-La suite comprend 21 tests unitaires et 4 parcours UI (personnalisation/navigation/reprise, ajout/suppression, illustrations et tartines). Pour cette itération visuelle, les parcours burger et tartines ont été revérifiés sur iPhone 18 Pro Simulator, iOS 27. Les tests UI ordinaires utilisent un stockage séparé et des notifications locales désactivées. Le test `testSystemTimerAuthorizationAndBackground` exerce séparément AlarmKit réel, avec son autorisation système, puis annule le minuteur. Ce contrôle a été ignoré explicitement sur ce simulateur : AlarmKit refuse l’autorisation, y compris après compilation signée localement. L’affichage réel de la Dynamic Island n’est donc pas encore validé.
+Le projet fusionné comprend 35 tests unitaires et 8 parcours UI ordinaires : recettes, ingrédients, illustrations, tartines et listes de courses. Les tests UI utilisent un stockage séparé et des notifications locales désactivées. Le test `testSystemTimerAuthorizationAndBackground` exerce séparément AlarmKit réel, avec son autorisation système, puis annule le minuteur. Ce contrôle reste exclu des tests ordinaires au simulateur : la connexion Apple et les alarmes système doivent être validées séparément sur un iPhone signé.
+
+Fusion locale du 2 octobre 2026 vérifiée sur iPhone 18 Pro Simulator, iOS 27 : 35 tests unitaires et 8 parcours UI réussis. Le parcours d’article libre a été relancé après correction du ciblage XCTest lorsque le clavier déplace l’alerte native ; les animations de l’application restent actives. La compilation et les tests ont utilisé une copie temporaire du projet, dont les sources et ressources ont été comparées au dossier original, pour éviter un blocage de coordination de lecture iCloud.
 
 ```sh
 xcodebuild -project 'Petit Chef.xcodeproj' -scheme 'Petit Chef' \
